@@ -24,6 +24,12 @@ import com.dot.gallery.generated.resources.cloud_help_nextcloud
 import com.dot.gallery.generated.resources.cloud_help_nfs
 import com.dot.gallery.generated.resources.cloud_help_owncloud
 import com.dot.gallery.generated.resources.cloud_help_smb
+import com.dot.gallery.generated.resources.cloud_help_telegram
+import com.dot.gallery.generated.resources.cloud_telegram_bot_token
+import com.dot.gallery.generated.resources.cloud_telegram_bot_token_hint
+import com.dot.gallery.generated.resources.cloud_telegram_passphrase
+import com.dot.gallery.generated.resources.cloud_telegram_passphrase_hint
+import com.dot.gallery.generated.resources.cloud_telegram_url_hint
 import com.dot.gallery.generated.resources.cloud_help_webdav
 import com.dot.gallery.generated.resources.cloud_nextcloud_app_password
 import com.dot.gallery.generated.resources.cloud_nfs_uid_gid
@@ -114,6 +120,7 @@ object ProviderUiDescriptors {
     private val httpRegex = Regex("^https?://.+")
     private val smbRegex = Regex("^smb://.+", RegexOption.IGNORE_CASE)
     private val nfsRegex = Regex("^nfs://.+", RegexOption.IGNORE_CASE)
+    private val telegramRegex = Regex("^(telegram://)?(-?\\d{5,20}|@[A-Za-z0-9_]{4,32})$", RegexOption.IGNORE_CASE)
 
     private val usernameField = CredentialField(
         kind = CredentialFieldKind.USERNAME,
@@ -129,6 +136,7 @@ object ProviderUiDescriptors {
     private val webDavFields = listOf(usernameField, passwordField)
 
     private val descriptors: Map<ProviderType, ProviderUiDescriptor> = buildMap {
+        put(ProviderType.TELEGRAM, telegramDescriptor())
         put(
             ProviderType.IMMICH,
             ProviderUiDescriptor(
@@ -243,6 +251,31 @@ object ProviderUiDescriptors {
             )
         )
     }
+
+    private fun telegramDescriptor() = ProviderUiDescriptor(
+        providerType = ProviderType.TELEGRAM,
+        category = ProviderCategory.STANDALONE,
+        icon = Icons.Outlined.Cloud,
+        urlRegex = telegramRegex,
+        urlHintRes = Res.string.cloud_telegram_url_hint,
+        setupHintRes = Res.string.cloud_help_telegram,
+        credentialFields = listOf(
+            CredentialField(
+                kind = CredentialFieldKind.API_KEY,
+                labelRes = Res.string.cloud_telegram_bot_token,
+                hintRes = Res.string.cloud_telegram_bot_token_hint,
+                isSecret = true
+            ),
+            CredentialField(
+                kind = CredentialFieldKind.PASSWORD,
+                labelRes = Res.string.cloud_telegram_passphrase,
+                hintRes = Res.string.cloud_telegram_passphrase_hint,
+                isSecret = true,
+                keyboardType = KeyboardType.Password
+            )
+        ),
+        credentialsSatisfied = { it.apiKey.isNotBlank() && it.password.length >= 12 }
+    )
 
     private fun fallback(type: ProviderType) = ProviderUiDescriptor(
         providerType = type,

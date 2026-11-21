@@ -40,6 +40,7 @@ import com.dot.gallery.cloud.netfs.bridge.NetFsLoopback
 import com.dot.gallery.cloud.netfs.bridge.NetFsLoopbackSource
 import com.dot.gallery.core.Resource
 import com.dot.gallery.domain.model.Media
+import com.dot.gallery.domain.model.definedTimestamp
 import com.dot.gallery.domain.util.getUri
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -544,7 +545,11 @@ open class NetworkFileSystemProvider(
             cacheFile.takeIf { it.isFile && it.length() > 0 }?.let { f ->
                 runCatching { f.readBytes() }.getOrNull()?.let { return@run it }
             }
-            val bytes = if (mime.startsWith("video/")) {
+            // Backends that keep ready-made previews (Telegram) serve them without touching the original.
+            val stored = runCatching {
+                withReconnectOnFailure { backend.readStoredPreview(requireConnection(), path, size) }
+            }.getOrNull()
+            val bytes = stored ?: if (mime.startsWith("video/")) {
                 NetFsThumbnailer.fromVideoUrl(context, getOriginalUrl(path), size)
             } else {
                 NetFsThumbnailer.fromImage(
@@ -795,8 +800,12 @@ open class NetworkFileSystemProvider(
         val size = runCatching {
             context.contentResolver.openAssetFileDescriptor(localMedia.getUri(), "r")?.use { it.length }
         }.getOrNull() ?: -1L
+        val writeMeta = if (backend.wantsUploadPreviews) buildWriteMeta(localMedia) else null
         try {
-            input.use { backend.write(conn, remotePath, it, size) }
+            input.use {
+                if (writeMeta != null) backend.write(conn, remotePath, it, size, writeMeta)
+                else backend.write(conn, remotePath, it, size)
+            }
         } catch (e: Exception) {
             var verified = remoteContentMatches(conn, remotePath, localMedia, size, checksum)
             if (!verified && !reconnectAttempted && isNetFsConnectionFailure(e)) {
@@ -871,7 +880,26 @@ open class NetworkFileSystemProvider(
     }.getOrDefault(false)
 
     private fun remoteHash(conn: NetFsConnection, remotePath: String): String =
-        backend.openRead(conn, remotePath, 0L).use(::contentSha1)
+        backend.knownContentSha1(conn, remotePath)
+            ?: backend.openRead(conn, remotePath, 0L).use(::contentSha1)
+
+    /** Capture time + small JPEGs rendered from the local original; never throws. */
+    private fun buildWriteMeta(localMedia: Media): NetFsWriteMeta {
+        val rendered = runCatching {
+            NetFsThumbnailer.renderLocalPreviews(
+                context = context,
+                uri = localMedia.getUri(),
+                isVideo = localMedia.mimeType.startsWith("video/")
+            )
+        }.onFailure {
+            CloudTrace.w("NetFs upload previews failed for '${localMedia.label}': ${it.message}")
+        }.getOrNull()
+        return NetFsWriteMeta(
+            takenMillis = localMedia.definedTimestamp * 1000L,
+            thumbnailJpeg = rendered?.first,
+            previewJpeg = rendered?.second
+        )
+    }
 
     private fun copyFailureMessage(error: Throwable): String {
         val message = error.message.orEmpty().lowercase()
@@ -951,7 +979,9 @@ open class NetworkFileSystemProvider(
             }
             val remoteHash = runInterruptible {
                 withReconnectOnFailure {
-                    backend.openRead(requireConnection(), remotePath, 0L).use(::contentSha1)
+                    val conn = requireConnection()
+                    backend.knownContentSha1(conn, remotePath)
+                        ?: backend.openRead(conn, remotePath, 0L).use(::contentSha1)
                 }
             }
             if (cloudMediaDao.updateContentHash(remotePath, backend.providerType, configId, remoteHash) == 0) {

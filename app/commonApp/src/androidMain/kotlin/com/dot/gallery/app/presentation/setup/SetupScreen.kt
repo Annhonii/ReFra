@@ -9,6 +9,7 @@ import com.dot.gallery.generated.resources.Res
 import org.jetbrains.compose.resources.stringResource
 import com.dot.gallery.generated.resources.cloud_provider_desc_nfs
 import com.dot.gallery.generated.resources.cloud_provider_desc_smb
+import com.dot.gallery.generated.resources.cloud_provider_desc_telegram
 import com.dot.gallery.generated.resources.cloud_provider_desc_webdav
 import com.dot.gallery.generated.resources.cloud_provider_desc_owncloud
 import com.dot.gallery.generated.resources.cloud_provider_desc_nextcloud
@@ -397,5 +398,6 @@ private fun setupProviderDescription(type: ProviderType): String = when (type) {
     ProviderType.WEBDAV -> stringResource(Res.string.cloud_provider_desc_webdav)
     ProviderType.SMB -> stringResource(Res.string.cloud_provider_desc_smb)
     ProviderType.NFS -> stringResource(Res.string.cloud_provider_desc_nfs)
+    ProviderType.TELEGRAM -> stringResource(Res.string.cloud_provider_desc_telegram)
     else -> type.displayName
 }

@@ -242,6 +242,7 @@ android {
             buildConfigField("Boolean", "WEBDAV_ENABLED", "$includeWebdav")
             buildConfigField("Boolean", "SMB_ENABLED", "$includeSmb")
             buildConfigField("Boolean", "NFS_ENABLED", "$includeNfs")
+            buildConfigField("Boolean", "TELEGRAM_ENABLED", "$includeTelegram")
             buildConfigField(
                 "String",
                 "CONTENT_AUTHORITY",
@@ -275,6 +276,7 @@ android {
             buildConfigField("Boolean", "WEBDAV_ENABLED", "$includeWebdav")
             buildConfigField("Boolean", "SMB_ENABLED", "$includeSmb")
             buildConfigField("Boolean", "NFS_ENABLED", "$includeNfs")
+            buildConfigField("Boolean", "TELEGRAM_ENABLED", "$includeTelegram")
             buildConfigField("String", "CONTENT_AUTHORITY", "\"com.dot.gallery.media_provider\"")
             buildConfigField("Boolean", "ENABLE_INDEXING", "true")
             buildConfigField("Boolean", "ALLOW_INSECURE_TLS", "true")
@@ -302,6 +304,7 @@ android {
             buildConfigField("Boolean", "WEBDAV_ENABLED", "$includeWebdav")
             buildConfigField("Boolean", "SMB_ENABLED", "$includeSmb")
             buildConfigField("Boolean", "NFS_ENABLED", "$includeNfs")
+            buildConfigField("Boolean", "TELEGRAM_ENABLED", "$includeTelegram")
             buildConfigField("Boolean", "ALLOW_INSECURE_TLS", "true")
             // Staging is a local-only variant (CI builds the Release build types), so it can
             // fall back to the auto-generated debug key when the release signing secrets are
@@ -325,6 +328,7 @@ android {
             buildConfigField("Boolean", "WEBDAV_ENABLED", "$includeWebdav")
             buildConfigField("Boolean", "SMB_ENABLED", "$includeSmb")
             buildConfigField("Boolean", "NFS_ENABLED", "$includeNfs")
+            buildConfigField("Boolean", "TELEGRAM_ENABLED", "$includeTelegram")
             buildConfigField("String", "CONTENT_AUTHORITY", "\"com.dot.gallery.gplay.media_provider\"")
             buildConfigField("Boolean", "ENABLE_INDEXING", "true")
             buildConfigField("Boolean", "ALLOW_INSECURE_TLS", "false")
@@ -543,6 +547,19 @@ val includeWebdav: Boolean
             val properties = Properties()
             properties.load(FileInputStream(fl))
             properties.getProperty("INCLUDE_WEBDAV", "false").toBoolean()
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+val includeTelegram: Boolean
+    get() {
+        if (isOffline) return false
+        val fl = rootProject.file("app.properties")
+        return try {
+            val properties = Properties()
+            properties.load(FileInputStream(fl))
+            properties.getProperty("INCLUDE_TELEGRAM", "false").toBoolean()
         } catch (_: Exception) {
             false
         }

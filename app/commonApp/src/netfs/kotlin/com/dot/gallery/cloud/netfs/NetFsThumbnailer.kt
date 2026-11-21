@@ -8,7 +8,9 @@ package com.dot.gallery.cloud.netfs
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.media.MediaMetadataRetriever
+import android.net.Uri
 import android.os.Handler
 import android.os.HandlerThread
 import androidx.annotation.OptIn
@@ -155,6 +157,55 @@ internal object NetFsThumbnailer {
             return null
         }
         return result.get()
+    }
+
+    /**
+     * Renders a (thumbnail, preview) JPEG pair from a *local* content [uri] at upload time, for backends
+     * that store previews next to the file. EXIF rotation is applied because re-encoding drops the tag.
+     * Returns null when the media cannot be decoded; callers then simply upload without previews.
+     */
+    fun renderLocalPreviews(context: Context, uri: Uri, isVideo: Boolean): Pair<ByteArray, ByteArray>? {
+        val source = (if (isVideo) localVideoFrame(context, uri) else localImage(context, uri)) ?: return null
+        val preview = scaleBitmap(source, targetDimension(ThumbnailSize.PREVIEW))
+        val thumb = scaleBitmap(preview, targetDimension(ThumbnailSize.THUMBNAIL))
+        return encode(thumb) to encode(preview)
+    }
+
+    private fun localImage(context: Context, uri: Uri): Bitmap? {
+        val resolver = context.contentResolver
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        val opts = BitmapFactory.Options().apply {
+            inSampleSize = sampleSize(bounds.outWidth, bounds.outHeight, targetDimension(ThumbnailSize.PREVIEW))
+        }
+        val decoded = resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) }
+            ?: return null
+        val rotation = runCatching {
+            resolver.openInputStream(uri)?.use { ExifInterface(it).rotationDegrees }
+        }.getOrNull() ?: 0
+        if (rotation == 0) return decoded
+        val matrix = Matrix().apply { postRotate(rotation.toFloat()) }
+        return Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
+    }
+
+    private fun localVideoFrame(context: Context, uri: Uri): Bitmap? {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(context, uri)
+            val durationMillis = retriever
+                .extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                ?.toLongOrNull()
+            firstAvailableVideoFrame(durationMillis) { timeUs ->
+                runCatching {
+                    retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                }.getOrNull()
+            }
+        } catch (_: Exception) {
+            null
+        } finally {
+            runCatching { retriever.release() }
+        }
     }
 
     private fun downscale(bytes: ByteArray, target: Int): ByteArray? {

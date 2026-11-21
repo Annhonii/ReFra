@@ -7,6 +7,7 @@ package com.dot.gallery.cloud.netfs
 
 import com.dot.gallery.cloud.core.CloudServerConfig
 import com.dot.gallery.cloud.core.ProviderType
+import com.dot.gallery.cloud.core.ThumbnailSize
 import java.io.EOFException
 import java.io.InputStream
 import java.io.InterruptedIOException
@@ -68,6 +69,17 @@ internal class NetFsMediaIndex(private val entries: List<NetFsEntry>) {
         )
     }
 }
+
+/**
+ * Extra data handed to [FileSystemBackend.write] for backends that opt in through
+ * [FileSystemBackend.wantsUploadPreviews]: the photo's own capture time and small JPEGs rendered
+ * from the local original, so the backend can serve grids without ever re-downloading the file.
+ */
+class NetFsWriteMeta(
+    val takenMillis: Long,
+    val thumbnailJpeg: ByteArray?,
+    val previewJpeg: ByteArray?
+)
 
 /** Disk usage for the connected share/export. */
 data class NetFsStorage(
@@ -161,6 +173,23 @@ interface FileSystemBackend {
 
     /** Create/overwrite [path] with [size] bytes from [data]. */
     fun write(conn: NetFsConnection, path: String, data: InputStream, size: Long)
+
+    /** True when the backend wants [NetFsWriteMeta] (capture time + previews) with each upload. */
+    val wantsUploadPreviews: Boolean get() = false
+
+    /** Like [write] but with [meta]; only called when [wantsUploadPreviews] is true. */
+    fun write(conn: NetFsConnection, path: String, data: InputStream, size: Long, meta: NetFsWriteMeta) {
+        write(conn, path, data, size)
+    }
+
+    /**
+     * SHA-1 (hex) of [path]'s content when the backend already knows it, so verification does not
+     * have to re-read the whole file. Null means "unknown: read and hash it".
+     */
+    fun knownContentSha1(conn: NetFsConnection, path: String): String? = null
+
+    /** A ready-made JPEG preview stored at upload time, or null to fall back to generating one. */
+    fun readStoredPreview(conn: NetFsConnection, path: String, size: ThumbnailSize): ByteArray? = null
 
     /** Delete the file at [path]. */
     fun delete(conn: NetFsConnection, path: String)

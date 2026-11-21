@@ -16,6 +16,7 @@ val ProviderType.isIncludedInBuild: Boolean
         ProviderType.WEBDAV -> BuildConfig.WEBDAV_ENABLED
         ProviderType.SMB -> BuildConfig.SMB_ENABLED
         ProviderType.NFS -> BuildConfig.NFS_ENABLED
+        ProviderType.TELEGRAM -> BuildConfig.TELEGRAM_ENABLED
         else -> true
     }
 

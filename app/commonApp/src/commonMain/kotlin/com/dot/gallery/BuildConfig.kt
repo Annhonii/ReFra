@@ -39,5 +39,6 @@ object BuildConfig {
     val WEBDAV_ENABLED: Boolean = BuildKonfig.WEBDAV_ENABLED
     val SMB_ENABLED: Boolean = BuildKonfig.SMB_ENABLED
     val NFS_ENABLED: Boolean = BuildKonfig.NFS_ENABLED
+    val TELEGRAM_ENABLED: Boolean = BuildKonfig.TELEGRAM_ENABLED
     val CARTO_BASEMAP_KEY: String = BuildKonfig.CARTO_BASEMAP_KEY
 }

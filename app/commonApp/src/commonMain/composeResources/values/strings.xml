@@ -564,6 +564,13 @@
     <string name="cloud_help_webdav">Enter the full WebDAV endpoint URL provided by your host, then your WebDAV username and password.</string>
     <string name="cloud_help_smb">Use smb://host/share/folder. Leave the username blank for guest access, or enter user / DOMAIN\\user and your password. The share must be on the same local network as this device. SMB2/3 is required (legacy SMB1 is not supported).</string>
     <string name="cloud_help_nfs">Use nfs://host/export/path, where everything after the host is the exported path. Only NFSv3 (with AUTH_SYS) is supported — NFSv2 and NFSv4 are not. Optionally set a uid:gid that the export grants access to. The export must allow this device's IP, offer an NFSv3 mount, and be on the same local network.</string>
+    <string name="cloud_help_telegram">Private encrypted cloud on a Telegram channel. 1) Create a private channel. 2) Create a bot with @BotFather and add it to the channel as an administrator. 3) Enter the channel id (e.g. -1001234567890) and the bot token. 4) Choose a long passphrase (12+ characters) — it never leaves this device and cannot be recovered: if you lose it, the uploaded photos are gone for good. Files are stored as encrypted .bin documents that only ReFra with your passphrase can open. Note: Telegram only lets bots delete messages younger than 48 hours, so older uploads removed from ReFra may stay in the channel as unreadable encrypted data.</string>
+    <string name="cloud_telegram_url_hint">-1001234567890</string>
+    <string name="cloud_telegram_bot_token">Bot token</string>
+    <string name="cloud_telegram_bot_token_hint">123456:ABC-DEF…</string>
+    <string name="cloud_telegram_passphrase">Encryption passphrase</string>
+    <string name="cloud_telegram_passphrase_hint">At least 12 characters</string>
+    <string name="cloud_provider_desc_telegram">Encrypted private Telegram channel</string>
     <string name="cloud_smb_url_hint">smb://host/share/folder</string>
     <string name="cloud_nfs_url_hint">nfs://host/export/path</string>
     <string name="cloud_smb_username_hint">user or DOMAIN\\user (leave blank for guest)</string>

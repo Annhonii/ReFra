@@ -164,7 +164,7 @@ internal fun matchingLocationMediaIds(
 
 internal fun usesLiveCloudAlbumMembership(providerType: ProviderType): Boolean =
     providerType == ProviderType.SMB || providerType == ProviderType.NFS ||
-        providerType == ProviderType.IMMICH
+        providerType == ProviderType.TELEGRAM || providerType == ProviderType.IMMICH
 
 /**
  * Album members that should render in the album view. Album endpoints (Immich

@@ -179,7 +179,7 @@ kotlin {
                 api(libs.retrofit.kotlinx.serialization)
                 api(libs.retrofit.converter.gson)
             }
-            if (includeSmb || includeNfs) {
+            if (includeSmb || includeNfs || includeTelegram) {
                 api(libs.androidx.media3.inspector)
                 api(libs.androidx.media3.inspector.frame)
             }
@@ -234,9 +234,10 @@ kotlin.sourceSets.getByName("androidMain").kotlin.apply {
     if (includeNextcloud) srcDir("src/nextcloud/kotlin") else srcDir("src/nonextcloud/kotlin")
     if (includeOwncloud || includeNextcloud || includeWebdav) srcDir("src/webdav/kotlin")
     if (includeWebdav) srcDir("src/genericwebdav/kotlin") else srcDir("src/nogenericwebdav/kotlin")
-    if (includeSmb || includeNfs) srcDir("src/netfs/kotlin")
+    if (includeSmb || includeNfs || includeTelegram) srcDir("src/netfs/kotlin")
     if (includeSmb) srcDir("src/smb/kotlin") else srcDir("src/nosmb/kotlin")
     if (includeNfs) srcDir("src/nfs/kotlin") else srcDir("src/nonfs/kotlin")
+    if (includeTelegram) srcDir("src/telegram/kotlin") else srcDir("src/notelegram/kotlin")
 }
 
 if (includeMaps) {
@@ -322,6 +323,7 @@ buildkonfig {
         buildConfigField(FieldSpec.Type.BOOLEAN, "WEBDAV_ENABLED", includeWebdav.toString())
         buildConfigField(FieldSpec.Type.BOOLEAN, "SMB_ENABLED", includeSmb.toString())
         buildConfigField(FieldSpec.Type.BOOLEAN, "NFS_ENABLED", includeNfs.toString())
+        buildConfigField(FieldSpec.Type.BOOLEAN, "TELEGRAM_ENABLED", includeTelegram.toString())
         buildConfigField(
             FieldSpec.Type.STRING,
             "CARTO_BASEMAP_KEY",
@@ -426,6 +428,19 @@ val includeSmb: Boolean
             val properties = Properties()
             properties.load(FileInputStream(fl))
             properties.getProperty("INCLUDE_SMB", "false").toBoolean()
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+val includeTelegram: Boolean
+    get() {
+        if (isOffline) return false
+        val fl = rootProject.file("app.properties")
+        return try {
+            val properties = Properties()
+            properties.load(FileInputStream(fl))
+            properties.getProperty("INCLUDE_TELEGRAM", "false").toBoolean()
         } catch (_: Exception) {
             false
         }

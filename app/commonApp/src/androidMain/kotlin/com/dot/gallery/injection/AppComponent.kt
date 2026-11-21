@@ -180,6 +180,7 @@ import com.dot.gallery.cloud.nextcloud.di.NextcloudProviderComponent
 import com.dot.gallery.cloud.nfs.di.NfsProviderComponent
 import com.dot.gallery.cloud.owncloud.di.OwnCloudProviderComponent
 import com.dot.gallery.cloud.smb.di.SmbProviderComponent
+import com.dot.gallery.cloud.telegram.di.TelegramProviderComponent
 import com.dot.gallery.cloud.local.FaceCropLoader
 import com.dot.gallery.cloud.local.LocalOcrProvider
 import com.dot.gallery.cloud.local.LocalPeopleBlurrer
@@ -230,6 +231,7 @@ abstract class AppComponent(
     NextcloudProviderComponent,
     WebDavProviderComponent,
     SmbProviderComponent,
+    TelegramProviderComponent,
     NfsProviderComponent,
     ViewerRuntime {
 

@@ -66,6 +66,7 @@ import com.dot.gallery.generated.resources.cloud_provider_desc_nextcloud
 import com.dot.gallery.generated.resources.cloud_provider_desc_nfs
 import com.dot.gallery.generated.resources.cloud_provider_desc_owncloud
 import com.dot.gallery.generated.resources.cloud_provider_desc_smb
+import com.dot.gallery.generated.resources.cloud_provider_desc_telegram
 import com.dot.gallery.generated.resources.cloud_provider_desc_webdav
 import com.dot.gallery.generated.resources.cloud_storage_used
 import com.dot.gallery.generated.resources.cloud_sync_now
@@ -250,6 +251,7 @@ private fun ProviderRow(providerType: ProviderType, position: Position, onAdd: (
         ProviderType.WEBDAV -> stringResource(Res.string.cloud_provider_desc_webdav)
         ProviderType.SMB -> stringResource(Res.string.cloud_provider_desc_smb)
         ProviderType.NFS -> stringResource(Res.string.cloud_provider_desc_nfs)
+        ProviderType.TELEGRAM -> stringResource(Res.string.cloud_provider_desc_telegram)
         else -> stringResource(Res.string.cloud_add_provider, providerType.displayName)
     }
     SettingsItem(

@@ -56,7 +56,7 @@ fun defaultSetupCapabilities(type: ProviderType): Set<SetupProviderCapability> =
         SetupProviderCapability.SYNC,
         SetupProviderCapability.SHARE_CREATE
     )
-    ProviderType.SMB, ProviderType.NFS -> setOf(
+    ProviderType.SMB, ProviderType.NFS, ProviderType.TELEGRAM -> setOf(
         SetupProviderCapability.REMOTE_ASSETS,
         SetupProviderCapability.REMOTE_ALBUMS,
         SetupProviderCapability.SYNC

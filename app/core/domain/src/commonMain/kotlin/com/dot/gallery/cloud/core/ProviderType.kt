@@ -15,6 +15,7 @@ enum class ProviderType(val displayName: String, val isRemote: Boolean) {
     WEBDAV("WebDAV", isRemote = true),
     SMB("SMB", isRemote = true),
     NFS("NFS", isRemote = true),
+    TELEGRAM("Telegram", isRemote = true),
     LOCAL_PEOPLE("On-Device Faces", isRemote = false),
     LOCAL_OCR("On-Device OCR", isRemote = false),
     LOCAL_CLIP("On-Device Search", isRemote = false);
