@@ -1,0 +1,40 @@
+name: Debug Build
+
+# Unsigned-secret-free debug build (no keystore needed) to verify the app compiles.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: debug-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/powershell || true
+      - name: Fix permissions
+        run: chmod +x ./gradlew
+      - name: Tune Gradle for CI
+        run: |
+          echo "org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8" >> gradle.properties
+          echo "org.gradle.workers.max=2" >> gradle.properties
+      - name: Build debug APK
+        run: ./gradlew --build-cache :app:androidApp:assembleArm64-v8aNoMLDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: refra-debug-arm64
+          path: app/androidApp/build/outputs/apk/**/*.apk
