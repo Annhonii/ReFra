@@ -96,7 +96,14 @@ internal class FakeTelegram(val token: String = "123456:TEST-TOKEN_abc") : AutoC
                 return fail(ex, 429, "Too Many Requests: retry after 1", ""","parameters":{"retry_after":1}""")
             }
             val method = path.removePrefix("/bot$token/")
-            val parts = parseMultipart(ex.requestHeaders.getFirst("Content-Type").orEmpty(), body)
+            val contentType = ex.requestHeaders.getFirst("Content-Type").orEmpty()
+            val parts = if (contentType.startsWith("application/x-www-form-urlencoded")) {
+                String(body).split("&").filter { it.isNotEmpty() }.map {
+                    Part(java.net.URLDecoder.decode(it.substringBefore("="), "UTF-8"), null, java.net.URLDecoder.decode(it.substringAfter("=", ""), "UTF-8").toByteArray())
+                }
+            } else {
+                parseMultipart(contentType, body)
+            }
             val fields = parts.filter { it.fileName == null }.associate { it.name to String(it.bytes) }
             val file = parts.firstOrNull { it.fileName != null }
             if (errorDescriptionWithToken && method == "getMe") {
