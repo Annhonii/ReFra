@@ -136,7 +136,7 @@ data class AddServerUiState(
     val password: String = "",
     val displayName: String = "",
     val syncEnabled: Boolean = false,
-    val wifiOnly: Boolean = true,
+    val wifiOnly: Boolean = false,
     // Networking (auto local/external URL switching)
     val autoUrlSwitch: Boolean = false,
     val localWifiSsid: String = "",

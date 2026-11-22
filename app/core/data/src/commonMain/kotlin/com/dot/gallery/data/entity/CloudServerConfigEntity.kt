@@ -29,12 +29,12 @@ data class CloudServerConfigEntity(
     val isActive: Boolean = true,
     val lastConnected: Long = 0L,
     val syncEnabled: Boolean = false,
-    val wifiOnly: Boolean = true,
+    val wifiOnly: Boolean = false,
     val syncIntervalMinutes: Int = 360,
     val syncFolders: String = "",
     // Backup options
-    @ColumnInfo(defaultValue = "0") val cellularPhotos: Boolean = false,
-    @ColumnInfo(defaultValue = "0") val cellularVideos: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val cellularPhotos: Boolean = true,
+    @ColumnInfo(defaultValue = "0") val cellularVideos: Boolean = true,
     @ColumnInfo(defaultValue = "0") val requireCharging: Boolean = false,
     @ColumnInfo(defaultValue = "0") val syncAlbums: Boolean = false,
     // Notification settings

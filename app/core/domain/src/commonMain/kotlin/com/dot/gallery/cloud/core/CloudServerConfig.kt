@@ -19,11 +19,11 @@ data class CloudServerConfig(
     val isActive: Boolean = true,
     val lastConnected: Long = 0L,
     val syncEnabled: Boolean = false,
-    val wifiOnly: Boolean = true,
+    val wifiOnly: Boolean = false,
     val syncIntervalMinutes: Int = 360,
     // Backup options
-    val cellularPhotos: Boolean = false,
-    val cellularVideos: Boolean = false,
+    val cellularPhotos: Boolean = true,
+    val cellularVideos: Boolean = true,
     val requireCharging: Boolean = false,
     val syncAlbums: Boolean = false,
     // Notification settings
