@@ -1074,6 +1074,7 @@ class MediaDistributorImpl @Inject constructor(
         albumId: Long,
         loadMode: AlbumMediaLoadMode
     ): Flow<MediaState<UriMedia>> = when {
+        albumId == MediaTypeAlbum.CLOUD_TAB_ALBUM_ID -> cloudTabTimelineMediaFlow(albumId)
         MediaTypeAlbum.isMediaTypeAlbumId(albumId) -> mediaTypeAlbumTimelineMediaFlow(albumId)
         isUnsortedCloudAlbumId(albumId) -> unsortedCloudAlbumTimelineMediaFlow(albumId)
         // Negative ids span both cloud album hash ids and (possibly negative) MediaStore
@@ -1099,23 +1100,31 @@ class MediaDistributorImpl @Inject constructor(
      */
     private fun mediaTypeAlbumTimelineMediaFlow(albumId: Long): Flow<MediaState<UriMedia>> {
         val type = MediaTypeAlbum.fromAlbumId(albumId)
-        return timelineMediaFlow
-            .map { timelineState ->
-                if (type == null) return@map MediaState<UriMedia>()
-                val filtered = timelineState.media.filter { type.matches(it) }
-                mapMediaToItem(
-                    data = filtered,
-                    error = timelineState.error,
-                    albumId = albumId,
-                    groupSimilarMedia = false,
-                    enabledGroupTypes = emptySet(),
-                    defaultDateFormat = dateFormatsFlow.value.first,
-                    extendedDateFormat = dateFormatsFlow.value.second,
-                    weeklyDateFormat = dateFormatsFlow.value.third,
-                    dateSource = timelineState.dateSource
-                ).copy(isPartial = timelineState.isPartial)
-            }
+        return filteredTimelineMediaFlow(albumId) { type?.matches(it) == true }
     }
+
+    /** The Cloud tab: only the items that live in the cloud (uploaded photos and videos), newest first. */
+    private fun cloudTabTimelineMediaFlow(albumId: Long): Flow<MediaState<UriMedia>> =
+        filteredTimelineMediaFlow(albumId) { it.isCloud }
+
+    private fun filteredTimelineMediaFlow(
+        albumId: Long,
+        predicate: (UriMedia) -> Boolean,
+    ): Flow<MediaState<UriMedia>> = timelineMediaFlow
+        .map { timelineState ->
+            val filtered = timelineState.media.filter(predicate)
+            mapMediaToItem(
+                data = filtered,
+                error = timelineState.error,
+                albumId = albumId,
+                groupSimilarMedia = false,
+                enabledGroupTypes = emptySet(),
+                defaultDateFormat = dateFormatsFlow.value.first,
+                extendedDateFormat = dateFormatsFlow.value.second,
+                weeklyDateFormat = dateFormatsFlow.value.third,
+                dateSource = timelineState.dateSource
+            ).copy(isPartial = timelineState.isPartial)
+        }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun cloudAlbumTimelineMediaFlow(albumId: Long): Flow<MediaState<UriMedia>> =

@@ -15,6 +15,7 @@ import com.dot.gallery.domain.util.isVideo
 sealed class Screen(val route: String) {
     data object TimelineScreen : Screen(Routes.TIMELINE)
     data object AlbumsScreen : Screen(Routes.ALBUMS)
+    data object CloudScreen : Screen(Routes.CLOUD)
 
     data object AlbumViewScreen : Screen("album_view_screen") {
 

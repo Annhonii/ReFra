@@ -52,6 +52,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
@@ -113,7 +114,8 @@ import com.dot.gallery.core.Settings.Misc.rememberSharedElements
 import com.dot.gallery.generated.resources.Res
 import com.dot.gallery.generated.resources.library
 import com.dot.gallery.generated.resources.nav_albums
-import com.dot.gallery.generated.resources.nav_timeline
+import com.dot.gallery.generated.resources.nav_cloud
+import com.dot.gallery.generated.resources.nav_device
 
 
 internal fun navigationRailSlideOffset(
@@ -181,17 +183,23 @@ private val RailCutoutGap = 6.dp
 
 @Composable
 fun rememberNavigationItems(): List<NavigationItem> {
-    val timelineTitle = stringResource(Res.string.nav_timeline)
-    val libraryTitle = stringResource(Res.string.library)
-    return remember(timelineTitle, libraryTitle) {
+    val deviceTitle = stringResource(Res.string.nav_device)
+    val cloudTitle = stringResource(Res.string.nav_cloud)
+    val albumsTitle = stringResource(Res.string.nav_albums)
+    return remember(deviceTitle, cloudTitle, albumsTitle) {
         listOf(
             NavigationItem(
-                name = timelineTitle,
+                name = deviceTitle,
                 route = Screen.TimelineScreen.route,
                 icon = Icons.Outlined.Photo,
             ),
             NavigationItem(
-                name = libraryTitle,
+                name = cloudTitle,
+                route = Screen.CloudScreen.route,
+                icon = Icons.Outlined.Cloud,
+            ),
+            NavigationItem(
+                name = albumsTitle,
                 route = Screen.LibraryScreen(),
                 icon = GalleryIcons.Library
             )

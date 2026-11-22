@@ -39,6 +39,12 @@ enum class MediaTypeAlbum(val albumId: Long, val labelRes: StringResource) {
     companion object {
         const val ID_BASE = -600L
 
+        /**
+         * Reserved id of the Cloud tab: not a [MediaTypeAlbum] entry (so it never shows up as a card in the
+         * Albums tab), but resolved by the distributor to "every cloud item of the timeline".
+         */
+        const val CLOUD_TAB_ALBUM_ID = -605L
+
         fun fromAlbumId(id: Long): MediaTypeAlbum? = entries.firstOrNull { it.albumId == id }
 
         fun isMediaTypeAlbumId(id: Long): Boolean = entries.any { it.albumId == id }

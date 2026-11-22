@@ -55,6 +55,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.dot.gallery.core.AppConstants
 import com.dot.gallery.core.LocalMediaDistributor
+import com.dot.gallery.core.presentation.components.MediaTypeAlbum
+import com.dot.gallery.core.restorableAlbumTimelineMediaFlow
 import com.dot.gallery.core.ui.util.AppBottomSheetState
 import com.dot.gallery.domain.model.Album
 import kotlinx.coroutines.Dispatchers
@@ -346,6 +348,23 @@ fun NavigationComp(
                     mediaState = timelineState(),
                     metadataState = metadataState(),
                     storyCardsViewModel = storyCardsViewModel,
+                )
+            }
+            composable(
+                route = Screen.CloudScreen()
+            ) {
+                val cloudDistributor = LocalMediaDistributor.current
+                val cloudMediaState = remember(cloudDistributor) {
+                    cloudDistributor.restorableAlbumTimelineMediaFlow(MediaTypeAlbum.CLOUD_TAB_ALBUM_ID)
+                }.collectAsStateWithLifecycle(initialValue = MediaState())
+                TimelineScreen(
+                    paddingValues = paddingValues,
+                    isScrolling = isScrolling,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedContentScope = this,
+                    mediaState = cloudMediaState,
+                    metadataState = metadataState(),
+                    storyCardsViewModel = null,
                 )
             }
             composable(

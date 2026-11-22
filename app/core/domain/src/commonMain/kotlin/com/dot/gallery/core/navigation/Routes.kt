@@ -15,4 +15,5 @@ object Routes {
     const val TIMELINE = "timeline_screen"
     const val ALBUMS = "albums_screen"
     const val LIBRARY = "library_screen"
+    const val CLOUD = "cloud_screen"
 }

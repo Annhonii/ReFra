@@ -10,7 +10,6 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -30,19 +29,17 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.dot.gallery.core.presentation.util.LocalHazeState
 import com.dot.gallery.core.presentation.util.NavigationItem
@@ -58,7 +55,6 @@ import dev.chrisbanes.haze.blur.LocalHazeBlurStyle
 import com.dot.gallery.core.ui.generated.resources.Res
 import com.dot.gallery.core.ui.generated.resources.search_media
 import org.jetbrains.compose.resources.stringResource
-import kotlin.math.abs
 
 const val GalleryNavigationDockTag = "Gallery.NavigationDock"
 const val GalleryNavigationSearchTag = "Gallery.NavigationSearch"
@@ -108,15 +104,7 @@ fun GalleryNavigationBarContent(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     val surfaceModifier = galleryFloatingSurface()
-    val selectedIndex = navigationItems.indexOfFirst { it.route == selectedRoute }
-    val target = selectedIndex.coerceAtLeast(0).toFloat()
-    val position by animateFloatAsState(target, GalleryIndicatorSpring, label = "dockIndicator")
-    val indicatorAlpha by animateFloatAsState(
-        if (selectedIndex >= 0) 1f else 0f,
-        label = "dockIndicatorAlpha",
-    )
-    val indicatorColor = MaterialTheme.colorScheme.surfaceContainerHighest
-    val itemPadding = 12.dp
+    val itemPadding = 8.dp
     Box(
         modifier = modifier
             .padding(horizontal = Spacing.ScreenHorizontal, vertical = Spacing.Medium),
@@ -135,26 +123,9 @@ fun GalleryNavigationBarContent(
                     .weight(1f)
                     .height(ComponentSize.NavigationBarHeight)
                     .then(surfaceModifier)
-                    .drawBehind {
-                        if (navigationItems.isEmpty() || indicatorAlpha <= 0f) return@drawBehind
-                        val pad = itemPadding.toPx()
-                        val itemWidth = (size.width - pad * 2) / navigationItems.size
-                        // Stretch along the travel direction while the indicator is still moving.
-                        val travel = abs(position - target).coerceAtMost(1f)
-                        val width = GalleryChrome.DockIndicatorWidth.toPx() + 20.dp.toPx() * travel
-                        val height = GalleryChrome.DockIndicatorHeight.toPx()
-                        val centre = pad + (position + 0.5f) * itemWidth
-                        val x = if (layoutDirection == LayoutDirection.Rtl) size.width - centre else centre
-                        drawRoundRect(
-                            color = indicatorColor,
-                            topLeft = Offset(x - width / 2, (size.height - height) / 2),
-                            size = Size(width, height),
-                            cornerRadius = CornerRadius(GalleryChrome.IndicatorCornerRadius.toPx()),
-                            alpha = indicatorAlpha,
-                        )
-                    }
                     .selectableGroup()
                     .padding(horizontal = itemPadding),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 navigationItems.forEach { item ->
@@ -196,14 +167,20 @@ fun RowScope.GalleryNavBarItem(
     isSelected: Boolean,
     onClick: (route: String) -> Unit,
 ) {
-    val selectedIconColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-        label = "selectedIconColor"
+    val contentColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+        label = "navItemContent"
+    )
+    val capsuleColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
+        label = "navItemCapsule"
     )
     Box(
         modifier = Modifier
-            .height(ComponentSize.NavigationBarHeight)
             .weight(1f)
+            .height(ComponentSize.NavigationBarHeight - 16.dp)
+            .clip(CircleShape)
+            .background(capsuleColor)
             .testTag(galleryNavigationItemTag(navItem.route))
             .selectable(
                 selected = isSelected,
@@ -212,11 +189,25 @@ fun RowScope.GalleryNavBarItem(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            modifier = Modifier.size(24.dp),
-            imageVector = navItem.icon,
-            contentDescription = navItem.name,
-            tint = selectedIconColor,
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            if (isSelected) {
+                Icon(
+                    modifier = Modifier.size(20.dp),
+                    imageVector = navItem.icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                )
+            }
+            Text(
+                text = navItem.name,
+                color = contentColor,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
