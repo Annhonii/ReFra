@@ -102,7 +102,10 @@ fun GalleryNavigationBarContent(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
-    val surfaceModifier = galleryFloatingSurface()
+    // Solid surface (no blur/tint) so the pill keeps the same light tone as Google Photos.
+    val surfaceModifier = Modifier
+        .clip(CircleShape)
+        .background(MaterialTheme.colorScheme.surfaceContainer)
     val itemPadding = 8.dp
     Box(
         modifier = modifier
@@ -185,13 +188,13 @@ fun RowScope.GalleryNavBarItem(
         contentAlignment = Alignment.Center,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp),
+            modifier = Modifier.padding(start = if (isSelected) 8.dp else 12.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             if (isSelected) {
                 Icon(
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(24.dp),
                     imageVector = navItem.icon,
                     contentDescription = null,
                     tint = contentColor,
@@ -200,7 +203,7 @@ fun RowScope.GalleryNavBarItem(
             Text(
                 text = navItem.name,
                 color = contentColor,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
