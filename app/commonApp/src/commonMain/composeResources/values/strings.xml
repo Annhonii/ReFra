@@ -28,7 +28,6 @@
     <string name="nav_timeline">Timeline</string>
     <string name="nav_device">Device</string>
     <string name="nav_cloud">Cloud</string>
-    <string name="nav_albums">Albums</string>
     <string name="media_location" translatable="false">Media Location</string>
     <string name="location_map_cd">Location Map</string>
     <string name="no_map_app">No app available to show the location</string>
