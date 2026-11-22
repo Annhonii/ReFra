@@ -929,6 +929,10 @@
     <string name="cloud_notif_failures_summary">Show notification when backup fails</string>
     <string name="cloud_notif_footnote">Android still hides these if notifications for ReFra are turned off in system settings.</string>
     <string name="cloud_backup_channel_status">Backup status</string>
+    <string name="cloud_backup_channel_progress">Backup progress</string>
+    <string name="cloud_backup_progress_title">Uploading to cloud</string>
+    <string name="cloud_backup_progress_eta">%1$d uploaded · %2$d left · about %3$s remaining</string>
+    <string name="cloud_backup_progress_estimating">%1$d uploaded · %2$d left · estimating time…</string>
     <string name="cloud_backup_failed_title">Backup incomplete</string>
     <string name="cloud_backup_failed_text">%1$d item(s) failed to upload</string>
     <!-- Cloud media indexing -->

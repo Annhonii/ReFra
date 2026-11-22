@@ -76,7 +76,11 @@ import com.dot.gallery.data.entity.backupFingerprint
 import com.dot.gallery.R
 import me.tatarka.inject.annotations.Inject
 import com.dot.gallery.generated.resources.Res
+import com.dot.gallery.generated.resources.cloud_backup_channel_progress
 import com.dot.gallery.generated.resources.cloud_backup_channel_status
+import com.dot.gallery.generated.resources.cloud_backup_progress_eta
+import com.dot.gallery.generated.resources.cloud_backup_progress_estimating
+import com.dot.gallery.generated.resources.cloud_backup_progress_title
 import com.dot.gallery.generated.resources.cloud_backup_failed_text
 import com.dot.gallery.generated.resources.cloud_backup_failed_title
 import com.dot.gallery.core.util.getString
@@ -347,6 +351,7 @@ class CloudUploadWorker @Inject constructor(
 
             val progressMutex = Mutex()
             val progressThrottle = BackupProgressThrottle(SystemClock::elapsedRealtime)
+            val uploadStartedAt = SystemClock.elapsedRealtime()
             coroutineScope {
                 tasks.groupBy { it.provider }.values.map { providerTasks ->
                     launch {
@@ -386,6 +391,12 @@ class CloudUploadWorker @Inject constructor(
                                         printDebug("CloudUploadWorker: [${task.accountLabel}] upload failed for ${task.media.label}: ${e.message}")
                                     }
                                     if (progressThrottle.shouldPublish(force = completedItems + failedItems >= totalItems)) {
+                                        postUploadProgressNotification(
+                                            total = totalItems,
+                                            done = completedItems + failedItems,
+                                            uploaded = completedItems,
+                                            elapsedMs = SystemClock.elapsedRealtime() - uploadStartedAt
+                                        )
                                         reportProgress(workData(
                                             KEY_PHASE to PHASE_UPLOADING,
                                             KEY_TOTAL_ITEMS to totalItems,
@@ -404,6 +415,7 @@ class CloudUploadWorker @Inject constructor(
                     }
                 }.joinAll()
             }
+            cancelUploadProgressNotification()
             if (env.isCancelled()) return WorkerResult.Retry("stopped mid-run", attemptCap = MAX_BACKUP_RUN_ATTEMPTS)
 
             reportProgress(workData(
@@ -678,6 +690,55 @@ class CloudUploadWorker @Inject constructor(
             )
         }
         return id
+    }
+
+    private fun canNotify(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                applicationContext, Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+
+    private fun formatEta(ms: Long): String {
+        val totalSec = (ms / 1000).coerceAtLeast(1)
+        return when {
+            totalSec < 60 -> "$totalSec sec"
+            totalSec < 3600 -> "${(totalSec + 30) / 60} min"
+            else -> "${totalSec / 3600} h ${(totalSec % 3600) / 60} min"
+        }
+    }
+
+    /** Ongoing progress notification: uploaded / left counts, progress bar and an ETA. */
+    private fun postUploadProgressNotification(total: Int, done: Int, uploaded: Int, elapsedMs: Long) {
+        if (!canNotify() || total <= 0) return
+        val left = (total - done).coerceAtLeast(0)
+        val channelId = ensureChannel(
+            CHANNEL_PROGRESS, Res.string.cloud_backup_channel_progress, NotificationManager.IMPORTANCE_LOW
+        )
+        val text = if (done > 0 && elapsedMs > 0 && left > 0) {
+            val etaMs = elapsedMs * left / done
+            applicationContext.getString(Res.string.cloud_backup_progress_eta, uploaded, left, formatEta(etaMs))
+        } else {
+            applicationContext.getString(Res.string.cloud_backup_progress_estimating, uploaded, left)
+        }
+        val builder = NotificationCompat.Builder(applicationContext, channelId)
+            .setSmallIcon(R.drawable.ic_cloud_upload)
+            .setContentTitle(applicationContext.getString(Res.string.cloud_backup_progress_title))
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setProgress(total, done.coerceAtMost(total), false)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+        runCatching {
+            NotificationManagerCompat.from(applicationContext).notify(NOTIFICATION_ID_PROGRESS, builder.build())
+        }
+    }
+
+    private fun cancelUploadProgressNotification() {
+        runCatching {
+            NotificationManagerCompat.from(applicationContext).cancel(NOTIFICATION_ID_PROGRESS)
+        }
     }
 
     private fun postFailureNotification(failed: Int, failedFiles: List<String>) {
