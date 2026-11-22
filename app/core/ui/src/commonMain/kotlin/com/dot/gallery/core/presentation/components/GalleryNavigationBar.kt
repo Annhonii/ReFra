@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -112,20 +111,17 @@ fun GalleryNavigationBarContent(
     ) {
         Row(
             modifier = Modifier
-                .widthIn(max = GalleryChrome.DockMaxWidth)
-                .fillMaxWidth()
                 .testTag(GalleryNavigationDockTag),
             horizontalArrangement = Arrangement.spacedBy(GalleryChrome.DockGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(
                 modifier = Modifier
-                    .weight(1f)
                     .height(ComponentSize.NavigationBarHeight)
                     .then(surfaceModifier)
                     .selectableGroup()
                     .padding(horizontal = itemPadding),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(0.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 navigationItems.forEach { item ->
@@ -177,7 +173,6 @@ fun RowScope.GalleryNavBarItem(
     )
     Box(
         modifier = Modifier
-            .weight(1f)
             .height(ComponentSize.NavigationBarHeight - 16.dp)
             .clip(CircleShape)
             .background(capsuleColor)
@@ -190,12 +185,13 @@ fun RowScope.GalleryNavBarItem(
         contentAlignment = Alignment.Center,
     ) {
         Row(
+            modifier = Modifier.padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (isSelected) {
                 Icon(
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(22.dp),
                     imageVector = navItem.icon,
                     contentDescription = null,
                     tint = contentColor,

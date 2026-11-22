@@ -13,7 +13,7 @@ object GalleryChrome {
     val ToolbarVerticalPadding = 8.dp
     val ToolbarCornerRadius = 28.dp
     val DockMaxWidth = 336.dp
-    val DockGap = 16.dp
+    val DockGap = 8.dp
     val DockIndicatorWidth = 52.dp
     val DockIndicatorHeight = 32.dp
     val IndicatorCornerRadius = 12.dp

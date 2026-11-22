@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 object ComponentSize {
     val MinimumTouchTarget = 48.dp
     val ButtonHeight = 64.dp
-    val NavigationBarHeight = 64.dp
+    val NavigationBarHeight = 56.dp
     val NavigationRailWidth = 80.dp
     val StateIcon = 96.dp
 }
