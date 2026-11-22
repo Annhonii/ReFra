@@ -32,10 +32,9 @@ jobs:
         run: |
           echo "org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8" >> gradle.properties
           echo "org.gradle.workers.max=2" >> gradle.properties
+      - name: Install pinned SDK CMake (native scripts require 3.31.6, not the runner's CMake 4)
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "cmake;3.31.6" >/dev/null
       - name: Build debug APK
-        env:
-          # Newer CMake on the runner rejects the old cmake_minimum_required in the native HEIF deps.
-          CMAKE_POLICY_VERSION_MINIMUM: "3.5"
         run: ./gradlew --build-cache --continue :app:androidApp:assembleArm64-v8aNoMLDebug
       - uses: actions/upload-artifact@v4
         with:
