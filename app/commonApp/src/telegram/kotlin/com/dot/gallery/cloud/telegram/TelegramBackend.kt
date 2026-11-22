@@ -43,7 +43,7 @@ class TelegramBackend(private val context: Context) : FileSystemBackend {
 
     override fun connect(config: CloudServerConfig): NetFsConnection {
         val chatId = parseChatId(config.serverUrl)
-        val token = config.apiKey?.trim().orEmpty()
+        val token = cleanToken(config.apiKey)
         val passphrase = config.password.orEmpty()
         if (token.isEmpty()) throw IOException("Bot token is required")
         if (passphrase.length < MIN_PASSPHRASE) {
@@ -58,7 +58,11 @@ class TelegramBackend(private val context: Context) : FileSystemBackend {
                 client.getMe()
             } catch (e: TelegramApiException) {
                 throw IOException(
-                    if (e.errorCode == 401) "Invalid bot token" else "Telegram rejected the bot: ${e.description}",
+                    when (e.errorCode) {
+                        401, 404 -> "Invalid bot token. Paste the full token from @BotFather (like 123456789:AAH…), " +
+                            "with no spaces. (Telegram: ${e.description})"
+                        else -> "Telegram rejected the bot: ${e.description} (code ${e.errorCode})"
+                    },
                     e
                 )
             }
@@ -190,6 +194,10 @@ class TelegramBackend(private val context: Context) : FileSystemBackend {
     companion object {
         const val MIN_PASSPHRASE = 12
         private val vaults = ConcurrentHashMap<String, TelegramVault>()
+
+        /** Tolerates what people paste: surrounding spaces/quotes/newlines and a leading `bot`. */
+        internal fun cleanToken(raw: String?): String =
+            raw.orEmpty().filterNot { it.isWhitespace() || it == '"' || it == '\'' }.removePrefix("bot")
 
         internal fun parseChatId(serverUrl: String): String {
             val id = serverUrl.trim().removePrefix("telegram://").removePrefix("TELEGRAM://").trim('/')
