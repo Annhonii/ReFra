@@ -26,6 +26,7 @@ import com.dot.gallery.generated.resources.cloud_help_owncloud
 import com.dot.gallery.generated.resources.cloud_help_smb
 import com.dot.gallery.generated.resources.cloud_help_telegram
 import com.dot.gallery.generated.resources.cloud_telegram_bot_token
+import com.dot.gallery.generated.resources.cloud_telegram_channel_id
 import com.dot.gallery.generated.resources.cloud_telegram_bot_token_hint
 import com.dot.gallery.generated.resources.cloud_telegram_passphrase
 import com.dot.gallery.generated.resources.cloud_telegram_passphrase_hint
@@ -105,6 +106,8 @@ data class ProviderUiDescriptor(
     val iconTinted: Boolean = true,
     val urlRegex: Regex,
     val urlHintRes: StringResource,
+    /** Overrides the generic "Server URL" label of the first field (e.g. Telegram asks for a channel id). */
+    val urlLabelRes: StringResource? = null,
     val credentialFields: List<CredentialField>,
     /** Reachable on the local network only — surfaces a LAN-only note + offline hints. */
     val isLanOnly: Boolean = false,
@@ -258,6 +261,7 @@ object ProviderUiDescriptors {
         icon = Icons.Outlined.Cloud,
         urlRegex = telegramRegex,
         urlHintRes = Res.string.cloud_telegram_url_hint,
+        urlLabelRes = Res.string.cloud_telegram_channel_id,
         setupHintRes = Res.string.cloud_help_telegram,
         credentialFields = listOf(
             CredentialField(

@@ -526,7 +526,7 @@ private fun ServerStep(
     AppTextField(
         value = state.serverUrl,
         onValueChange = actions.updateServerUrl,
-        label = { Text(stringResource(Res.string.cloud_server_url)) },
+        label = { Text(stringResource(descriptor.urlLabelRes ?: Res.string.cloud_server_url)) },
         placeholder = { Text(stringResource(descriptor.urlHintRes)) },
         modifier = frostedFieldModifier(),
         containerColor = wizardFieldColor,

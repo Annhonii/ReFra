@@ -47,7 +47,7 @@ class TelegramBackend(private val context: Context) : FileSystemBackend {
         val passphrase = config.password.orEmpty()
         if (token.isEmpty()) throw IOException("Bot token is required")
         if (passphrase.length < MIN_PASSPHRASE) {
-            throw IOException("Encryption passphrase must be at least $MIN_PASSPHRASE characters")
+            throw IOException("Encryption password must be at least $MIN_PASSPHRASE characters")
         }
         val key = registryKey(token, chatId, passphrase)
         vaults[key]?.let { return TgConnection(it, chatId) }
@@ -87,7 +87,7 @@ class TelegramBackend(private val context: Context) : FileSystemBackend {
                 vault.open()
             } catch (e: TelegramCryptoException) {
                 vault.shutdown()
-                throw IOException("Wrong encryption passphrase for this channel", e)
+                throw IOException("Wrong encryption password for this channel", e)
             }
             vaults[key] = vault
             return TgConnection(vault, chatId)
@@ -201,7 +201,7 @@ class TelegramBackend(private val context: Context) : FileSystemBackend {
 
         internal fun parseChatId(serverUrl: String): String {
             val id = serverUrl.trim().removePrefix("telegram://").removePrefix("TELEGRAM://").trim('/')
-            if (id.isEmpty()) throw IOException("Channel id is required (e.g. telegram://-1001234567890)")
+            if (id.isEmpty()) throw IOException("Channel ID is required (e.g. telegram://-1001234567890)")
             return id
         }
 
