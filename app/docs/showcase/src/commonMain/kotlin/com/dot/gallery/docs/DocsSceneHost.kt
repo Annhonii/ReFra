@@ -155,7 +155,7 @@ fun DocsSceneHost(
 
         val allowBlur = store.observed(
             initialPrefs,
-            SettingsKeys.allowBlur.withDefault(supportsBlur),
+            SettingsKeys.allowBlur.withDefault(false),
         )
         val prefs = ThemePreferences(
             forceTheme = forceTheme,

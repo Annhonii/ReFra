@@ -89,7 +89,7 @@ fun MainSearchBar(
             }
     }
 
-    val allowBlur by rememberPreference(SettingsKeys.allowBlur.withDefault(supportsBlur))
+    val allowBlur by rememberPreference(SettingsKeys.allowBlur.withDefault(false))
     val surfaceContainer =
         MaterialTheme.colorScheme.surfaceContainer
     val backgroundModifier = remember(allowBlur) {

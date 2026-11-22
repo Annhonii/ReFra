@@ -101,7 +101,7 @@ fun SetupContent(
     // One haze source for the whole wizard: the blob backdrop. Glass panels and the bottom bar
     // blur it; the allow-blur setting switches them to their solid fallback.
     val hazeState = rememberHazeState()
-    val allowBlur by rememberPreference(SettingsKeys.allowBlur.withDefault(supportsBlur))
+    val allowBlur by rememberPreference(SettingsKeys.allowBlur.withDefault(false))
     val blurSwitch = remember(allowBlur) { HazeBlurStyle { blurEnabled(allowBlur) } }
 
     // A single SharedTransitionLayout wraps the pager so common chrome (back button, progress

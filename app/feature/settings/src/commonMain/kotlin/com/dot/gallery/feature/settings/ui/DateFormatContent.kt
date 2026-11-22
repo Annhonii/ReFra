@@ -197,7 +197,7 @@ fun DateFormatContent(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    val allowBlur by rememberPreference(SettingsKeys.allowBlur.withDefault(supportsBlur))
+                    val allowBlur by rememberPreference(SettingsKeys.allowBlur.withDefault(false))
                     val followTheme = remember(allowBlur) { !allowBlur }
                     val contentColor by animateColorAsState(
                         targetValue = if (followTheme) MaterialTheme.colorScheme.onSurface else Color.White,
@@ -312,7 +312,7 @@ fun DateFormatContent(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    val allowBlur by rememberPreference(SettingsKeys.allowBlur.withDefault(supportsBlur))
+                    val allowBlur by rememberPreference(SettingsKeys.allowBlur.withDefault(false))
                     val followTheme = remember(allowBlur) { !allowBlur }
                     val contentColor by animateColorAsState(
                         targetValue = if (followTheme) MaterialTheme.colorScheme.onSurface else Color.White,

@@ -39,7 +39,7 @@ class GalleryEditorActivity : EditorActivity() {
                 GalleryTheme(darkTheme = true) {
                     EditorWorkspaceTheme {
                         val allowBlur by rememberPreference(
-                            SettingsKeys.allowBlur.withDefault(supportsBlur)
+                            SettingsKeys.allowBlur.withDefault(false)
                         )
                         CompositionLocalProvider(
                             LocalEditorUiPreferences provides

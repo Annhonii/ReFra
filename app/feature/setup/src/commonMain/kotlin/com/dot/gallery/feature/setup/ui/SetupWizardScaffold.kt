@@ -151,7 +151,7 @@ fun SetupWizardScaffold(
     // restart the infinite animation and flicker on every page switch).
     val backgroundHandledExternally = LocalSetupSharedTransitionScope.current != null
     val hazeState = remember { HazeState() }
-    val allowBlur by rememberPreference(SettingsKeys.allowBlur.withDefault(supportsBlur))
+    val allowBlur by rememberPreference(SettingsKeys.allowBlur.withDefault(false))
 
     Box(modifier = modifier.fillMaxSize()) {
         if (!backgroundHandledExternally) {
