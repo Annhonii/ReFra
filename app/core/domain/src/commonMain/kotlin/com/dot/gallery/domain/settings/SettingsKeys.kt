@@ -33,7 +33,7 @@ object SettingsKeys {
     val allowBlur = PrefKey.bool("allow_blur", default = false)
     val allowGlass = PrefKey.bool("allow_glass", default = false)
     val autoContrast = PrefKey.bool("auto_contrast", default = false)
-    val sharedElements = PrefKey.bool("shared_elements", default = false)
+    val sharedElements = PrefKey.bool("shared_elements", default = true)
     /** Mirrors `MapAppearance.SYSTEM.storedValue` — stored as the enum's storedValue string. */
     val mapAppearance = PrefKey.string("map_appearance", default = "system")
     val cartoBasemapKey = PrefKey.string("carto_basemap_key", default = "")
