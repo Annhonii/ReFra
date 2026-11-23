@@ -41,7 +41,14 @@ internal class TelegramVault(
     private val indexFile: File,
     private val chunkSize: Int = DEFAULT_CHUNK_SIZE,
     private val manifestDelayMs: Long = DEFAULT_MANIFEST_DELAY_MS,
-    private val log: (String) -> Unit = {}
+    private val log: (String) -> Unit = {},
+    /**
+     * A shared (family) album: several phones write to the same channel, so before every manifest
+     * push the vault merges the manifest already in the channel, and it re-reads it periodically to
+     * pick up what the other phones uploaded or deleted.
+     */
+    private val shared: Boolean = false,
+    private val sharedRefreshMs: Long = DEFAULT_SHARED_REFRESH_MS
 ) {
 
     private val lock = Any()
@@ -52,6 +59,9 @@ internal class TelegramVault(
     private var flushScheduled = false
     @Volatile
     private var manifestFailures = 0
+    @Volatile
+    private var lastRefreshMs = 0L
+    private val refreshing = java.util.concurrent.atomic.AtomicBoolean(false)
 
     private val ioPool: ExecutorService = Executors.newCachedThreadPool(daemonFactory("tg-io"))
     private val scheduler: ScheduledExecutorService =
@@ -76,6 +86,46 @@ internal class TelegramVault(
             opened = true
         }
         ioPool.execute { runCatching { retryPendingDeletes() } }
+        if (shared) maybeRefreshAsync(force = true)
+    }
+
+    /**
+     * Shared albums: merges the manifest currently pinned in the channel into the local index.
+     * Returns true when the local index changed. Entries that only exist locally are pushed back.
+     */
+    fun refresh(): Boolean {
+        if (!shared) return false
+        val chat = client.getChat(chatId)
+        lastRefreshMs = System.currentTimeMillis()
+        val fileId = chat.pinnedFileId
+        if (fileId == null || chat.pinnedFileName != MANIFEST_NAME) return false
+        val remote = TelegramIndex.fromJsonBytes(TelegramCrypto.openContainer(master, client.downloadFile(fileId)))
+        var pushBack = false
+        val changed = synchronized(lock) {
+            requireOpen()
+            val result = index.mergeRemote(remote)
+            chat.pinnedMessageId?.let { index.manifestMessageId = it }
+            if (result.changed || result.localOnly) persistLocked(index)
+            pushBack = result.localOnly
+            result.changed
+        }
+        if (pushBack) markDirty()
+        return changed
+    }
+
+    private fun maybeRefreshAsync(force: Boolean = false) {
+        if (!shared) return
+        if (!force && System.currentTimeMillis() - lastRefreshMs < sharedRefreshMs) return
+        if (!refreshing.compareAndSet(false, true)) return
+        ioPool.execute {
+            try {
+                refresh()
+            } catch (e: Exception) {
+                log("shared refresh failed: ${e.message}")
+            } finally {
+                refreshing.set(false)
+            }
+        }
     }
 
     private fun restoreFromChannel(): TelegramIndex? {
@@ -92,7 +142,10 @@ internal class TelegramVault(
 
     // ---- index queries --------------------------------------------------------------------------
 
-    fun entries(): List<TgEntry> = synchronized(lock) { requireOpen(); index.all() }
+    fun entries(): List<TgEntry> {
+        maybeRefreshAsync()
+        return synchronized(lock) { requireOpen(); index.all() }
+    }
 
     fun find(path: String): TgEntry? = synchronized(lock) { requireOpen(); index[path] }
 
@@ -319,7 +372,7 @@ internal class TelegramVault(
     fun delete(path: String): DeleteOutcome {
         val entry = synchronized(lock) {
             requireOpen()
-            index.remove(path)?.also { persistLocked(index) }
+            index.removeWithTombstone(path, System.currentTimeMillis()).also { persistLocked(index) }
         } ?: return DeleteOutcome(existed = false, deleted = 0, refused = 0, deferred = 0)
         val outcome = deleteMessages(entry.allMessageIds())
         markDirty()
@@ -405,6 +458,10 @@ internal class TelegramVault(
     /** Uploads the encrypted index to the channel now if anything changed since the last upload. */
     fun flushManifest() {
         flushLock.withLock {
+            if (shared && synchronized(lock) { dirty && opened }) {
+                // Fold in what the other phones pushed since we last looked, so we never overwrite it.
+                runCatching { refresh() }.onFailure { log("pre-push refresh failed: ${it.message}") }
+            }
             val sealed = synchronized(lock) {
                 if (!dirty || !opened) return
                 dirty = false
@@ -461,6 +518,7 @@ internal class TelegramVault(
     companion object {
         const val DEFAULT_CHUNK_SIZE = 8 * 1024 * 1024
         const val DEFAULT_MANIFEST_DELAY_MS = 90_000L
+        const val DEFAULT_SHARED_REFRESH_MS = 30_000L
         const val MANIFEST_NAME = "m.bin"
         private const val MAX_MANIFEST_DELAY_MS = 30 * 60_000L
         private const val READ_AHEAD = 2

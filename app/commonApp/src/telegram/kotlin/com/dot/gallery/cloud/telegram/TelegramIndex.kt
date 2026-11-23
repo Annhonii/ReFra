@@ -65,6 +65,9 @@ internal class TelegramIndex {
     /** Telegram messages we still need to delete (a previous attempt failed for a transient reason). */
     val pendingDeletes: MutableList<Long> = ArrayList()
 
+    /** Paths removed on some device (path -> deletion time), so a merge never resurrects them. */
+    val tombstones: MutableMap<String, Long> = LinkedHashMap()
+
     val size: Int get() = entries.size
 
     operator fun get(path: String): TgEntry? = entries[path]
@@ -73,6 +76,63 @@ internal class TelegramIndex {
 
     fun remove(path: String): TgEntry? = entries.remove(path)
 
+    /** Removes [path] and remembers the deletion (shared albums merge indexes from several phones). */
+    fun removeWithTombstone(path: String, nowMs: Long): TgEntry? {
+        val removed = entries.remove(path)
+        tombstones[path] = nowMs
+        while (tombstones.size > MAX_TOMBSTONES) tombstones.remove(tombstones.keys.first())
+        return removed
+    }
+
+    class MergeResult(
+        /** The local index gained or lost entries because of the remote one. */
+        val changed: Boolean,
+        /** The local index holds something the remote one lacks, so it must be pushed back. */
+        val localOnly: Boolean
+    )
+
+    /**
+     * Folds the index another phone pushed to the channel into this one. Entries are unioned by path
+     * (the newer upload wins), and deletions travel as tombstones. Pure: no I/O.
+     */
+    fun mergeRemote(remote: TelegramIndex): MergeResult {
+        var changed = false
+        var localOnly = false
+        for ((path, time) in remote.tombstones) {
+            if ((tombstones[path] ?: Long.MIN_VALUE) < time) {
+                tombstones[path] = time
+            }
+        }
+        while (tombstones.size > MAX_TOMBSTONES) tombstones.remove(tombstones.keys.first())
+        for (mine in all()) {
+            val t = tombstones[mine.path]
+            if (t != null && t >= mine.addedMs) {
+                entries.remove(mine.path)
+                changed = true
+            }
+        }
+        for (theirs in remote.all()) {
+            val t = tombstones[theirs.path]
+            if (t != null && t >= theirs.addedMs) continue
+            val mine = entries[theirs.path]
+            when {
+                mine == null || theirs.addedMs > mine.addedMs -> {
+                    entries[theirs.path] = theirs
+                    changed = true
+                }
+                mine.addedMs > theirs.addedMs -> localOnly = true
+            }
+        }
+        for (mine in all()) {
+            val theirs = remote[mine.path]
+            if (theirs == null || mine.addedMs > theirs.addedMs) localOnly = true
+        }
+        for ((path, time) in tombstones) {
+            if ((remote.tombstones[path] ?: Long.MIN_VALUE) < time) localOnly = true
+        }
+        return MergeResult(changed, localOnly)
+    }
+
     fun all(): List<TgEntry> = entries.values.toList()
 
     fun toJsonBytes(): ByteArray {
@@ -80,6 +140,9 @@ internal class TelegramIndex {
             put("v", 1)
             manifestMessageId?.let { put("mm", it) }
             put("pd", buildJsonArray { pendingDeletes.forEach { add(JsonPrimitive(it)) } })
+            if (tombstones.isNotEmpty()) {
+                put("tb", buildJsonObject { tombstones.forEach { (path, time) -> put(path, time) } })
+            }
             put("e", buildJsonArray { entries.values.forEach { add(entryToJson(it)) } })
         }
         return root.toString().toByteArray(Charsets.UTF_8)
@@ -106,6 +169,8 @@ internal class TelegramIndex {
     }
 
     companion object {
+        private const val MAX_TOMBSTONES = 5000
+
         fun fromJsonBytes(bytes: ByteArray): TelegramIndex {
             val root = try {
                 Json.parseToJsonElement(bytes.toString(Charsets.UTF_8)).jsonObject
@@ -116,6 +181,9 @@ internal class TelegramIndex {
             if (version != 1) throw IOException("Unsupported index version: $version")
             val index = TelegramIndex()
             index.manifestMessageId = root["mm"]?.jsonPrimitive?.longOrNull
+            root["tb"]?.jsonObject?.forEach { (path, el) ->
+                el.jsonPrimitive.longOrNull?.let { index.tombstones[path] = it }
+            }
             root["pd"]?.jsonArray?.forEach { el -> el.jsonPrimitive.longOrNull?.let(index.pendingDeletes::add) }
             root["e"]?.jsonArray?.forEach { el ->
                 val e = el.jsonObject
