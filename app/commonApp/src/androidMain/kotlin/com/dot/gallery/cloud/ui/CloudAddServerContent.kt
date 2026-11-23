@@ -108,6 +108,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.dot.gallery.cloud.core.auth.InteractiveAuthErrorKind
+import com.dot.gallery.cloud.core.ProviderType
 import com.dot.gallery.cloud.ui.descriptor.CredentialField
 import com.dot.gallery.cloud.ui.descriptor.CredentialFieldKind
 import com.dot.gallery.cloud.ui.descriptor.CredentialValues
@@ -548,6 +549,9 @@ private fun ServerStep(
     descriptor.setupHintRes?.let { hintRes ->
         Spacer(Modifier.height(8.dp))
         SetupHelpCard(hintText = stringResource(hintRes))
+    }
+    if (descriptor.providerType == ProviderType.TELEGRAM) {
+        TelegramSharedAlbumSection(state = state, actions = actions)
     }
 }
 

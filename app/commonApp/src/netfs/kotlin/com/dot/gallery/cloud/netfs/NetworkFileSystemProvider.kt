@@ -710,8 +710,11 @@ open class NetworkFileSystemProvider(
 
     // === Sync ===
 
-    override fun deterministicRemoteId(localMedia: Media, targetPath: String?): String =
-        (targetPath?.trimEnd('/')?.ifEmpty { null } ?: "Photos") + "/${localMedia.label}"
+    override fun deterministicRemoteId(localMedia: Media, targetPath: String?): String {
+        val base = targetPath?.trimEnd('/')?.ifEmpty { null } ?: "Photos"
+        val sub = currentConfig?.let(backend::uploadSubfolder)?.trim('/')?.ifEmpty { null }
+        return if (sub == null) "$base/${localMedia.label}" else "$base/$sub/${localMedia.label}"
+    }
 
     override suspend fun uploadAsset(localMedia: Media, targetPath: String?): Result<CloudMediaEntity> =
         withContext(Dispatchers.IO) {

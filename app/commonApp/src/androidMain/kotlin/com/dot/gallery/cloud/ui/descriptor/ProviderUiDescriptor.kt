@@ -123,7 +123,7 @@ object ProviderUiDescriptors {
     private val httpRegex = Regex("^https?://.+")
     private val smbRegex = Regex("^smb://.+", RegexOption.IGNORE_CASE)
     private val nfsRegex = Regex("^nfs://.+", RegexOption.IGNORE_CASE)
-    private val telegramRegex = Regex("^(telegram://)?(-?\\d{5,20}|@[A-Za-z0-9_]{4,32})$", RegexOption.IGNORE_CASE)
+    private val telegramRegex = Regex("^(telegram://|telegram-shared://)?(-?\\d{5,20}|@[A-Za-z0-9_]{4,32})$", RegexOption.IGNORE_CASE)
 
     private val usernameField = CredentialField(
         kind = CredentialFieldKind.USERNAME,

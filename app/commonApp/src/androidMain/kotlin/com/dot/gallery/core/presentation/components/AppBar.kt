@@ -53,6 +53,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Cloud
+import androidx.compose.material.icons.outlined.Groups
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dot.gallery.cloud.ui.backup.BackupPillViewModel
+import com.dot.gallery.injection.injectViewModel
+import com.dot.gallery.generated.resources.nav_shared
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
@@ -96,7 +101,6 @@ import com.dot.gallery.ui.core.icons.Library
 import com.dot.gallery.ui.theme.ComponentSize
 import com.dot.gallery.ui.theme.Spacing
 import com.dot.gallery.core.LocalMediaSelector
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dot.gallery.ui.theme.GalleryChrome
 import com.dot.gallery.core.ui.settings.rememberPreference
 import com.dot.gallery.domain.settings.SettingsKeys
@@ -186,8 +190,11 @@ fun rememberNavigationItems(): List<NavigationItem> {
     val deviceTitle = stringResource(Res.string.nav_device)
     val cloudTitle = stringResource(Res.string.nav_cloud)
     val albumsTitle = stringResource(Res.string.nav_albums)
-    return remember(deviceTitle, cloudTitle, albumsTitle) {
-        listOf(
+    val sharedTitle = stringResource(Res.string.nav_shared)
+    val hasShared by injectViewModel<BackupPillViewModel> { backupPillViewModel }
+        .config.collectAsStateWithLifecycle()
+    return remember(deviceTitle, cloudTitle, albumsTitle, sharedTitle, hasShared.hasSharedAccount) {
+        listOfNotNull(
             NavigationItem(
                 name = deviceTitle,
                 route = Screen.TimelineScreen.route,
@@ -198,6 +205,11 @@ fun rememberNavigationItems(): List<NavigationItem> {
                 route = Screen.CloudScreen.route,
                 icon = Icons.Outlined.Cloud,
             ),
+            if (hasShared.hasSharedAccount) NavigationItem(
+                name = sharedTitle,
+                route = Screen.SharedScreen.route,
+                icon = Icons.Outlined.Groups,
+            ) else null,
             NavigationItem(
                 name = albumsTitle,
                 route = Screen.LibraryScreen(),

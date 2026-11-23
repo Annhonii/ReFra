@@ -375,6 +375,25 @@ fun NavigationComp(
                 )
             }
             composable(
+                route = Screen.SharedScreen()
+            ) {
+                val sharedDistributor = LocalMediaDistributor.current
+                val sharedMediaState = remember(sharedDistributor) {
+                    sharedDistributor.restorableAlbumTimelineMediaFlow(MediaTypeAlbum.SHARED_TAB_ALBUM_ID)
+                }.collectAsStateWithLifecycle(initialValue = MediaState())
+                TimelineScreen(
+                    paddingValues = paddingValues,
+                    isScrolling = isScrolling,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedContentScope = this,
+                    mediaState = sharedMediaState,
+                    metadataState = metadataState(),
+                    storyCardsViewModel = null,
+                    viewerAlbumId = MediaTypeAlbum.SHARED_TAB_ALBUM_ID,
+                    scrollToTopRoute = Screen.SharedScreen.route,
+                )
+            }
+            composable(
                 route = Screen.TrashedScreen()
             ) {
                 val trashedMediaState = navViewModel.trashedMediaState.collectAsStateWithLifecycle()

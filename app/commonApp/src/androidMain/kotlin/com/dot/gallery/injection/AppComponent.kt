@@ -360,7 +360,8 @@ abstract class AppComponent(
             database.getScannedMediaDao(),
             database.getSmartScanDao(),
             database.getMediaCaptureTimeDao(),
-            startupGate
+            startupGate,
+            database.getCloudServerConfigDao()
         )
     }
 

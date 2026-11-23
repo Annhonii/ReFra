@@ -28,6 +28,7 @@
     <string name="nav_timeline">Timeline</string>
     <string name="nav_device">Device</string>
     <string name="nav_cloud">Cloud</string>
+    <string name="nav_shared">Shared</string>
     <string name="media_location" translatable="false">Media Location</string>
     <string name="location_map_cd">Location Map</string>
     <string name="no_map_app">No app available to show the location</string>
@@ -569,6 +570,16 @@
     <string name="cloud_help_telegram">Private encrypted cloud on a Telegram channel. 1) Create a private channel. 2) Create a bot with @BotFather and add it to the channel as an administrator. 3) Enter the channel ID (e.g. -1001234567890) and the bot token. 4) Choose a long encryption password (12+ characters) and save it somewhere safe to access your data again in future — it never leaves this device and cannot be recovered: if you lose it, the uploaded photos are gone for good. Files are stored as encrypted .bin documents that only ReFra with your passphrase can open. Note: Telegram only lets bots delete messages younger than 48 hours, so older uploads removed from ReFra may stay in the channel as unreadable encrypted data.</string>
     <string name="cloud_telegram_url_hint">-1001234567890</string>
     <string name="cloud_telegram_channel_id">Channel ID</string>
+    <string name="cloud_shared_album_name">Family album</string>
+    <string name="cloud_shared_album_switch">Shared family album</string>
+    <string name="cloud_shared_album_switch_desc">Everyone you invite can upload to this album and see all its photos</string>
+    <string name="cloud_shared_album_join">Join with invite</string>
+    <string name="cloud_shared_album_share">Share invite</string>
+    <string name="cloud_shared_album_share_warning">Anyone with the invite can see, add and delete photos in this album. Send it only to people you trust, and use a separate bot and channel just for this album.</string>
+    <string name="cloud_shared_album_dialog_title">Join a shared album</string>
+    <string name="cloud_shared_album_paste_hint">Paste the invite text</string>
+    <string name="cloud_shared_album_invalid_invite">This is not a valid invite</string>
+    <string name="cloud_telegram_join_confirm">Join</string>
     <string name="cloud_telegram_bot_token">Bot token</string>
     <string name="cloud_telegram_bot_token_hint">123456:ABC-DEF…</string>
     <string name="cloud_telegram_passphrase">Encryption password</string>

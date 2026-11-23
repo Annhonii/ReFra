@@ -48,6 +48,9 @@ enum class MediaTypeAlbum(val albumId: Long, val labelRes: StringResource) {
         /** Reserved id for the Device tab: only items that are on the phone (no cloud-only tiles). */
         const val DEVICE_TAB_ALBUM_ID = -606L
 
+        /** Reserved id for the Shared tab: media of shared family album accounts. */
+        const val SHARED_TAB_ALBUM_ID = -607L
+
         fun fromAlbumId(id: Long): MediaTypeAlbum? = entries.firstOrNull { it.albumId == id }
 
         fun isMediaTypeAlbumId(id: Long): Boolean = entries.any { it.albumId == id }

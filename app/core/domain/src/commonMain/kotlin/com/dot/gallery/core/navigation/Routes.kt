@@ -16,4 +16,5 @@ object Routes {
     const val ALBUMS = "albums_screen"
     const val LIBRARY = "library_screen"
     const val CLOUD = "cloud_screen"
+    const val SHARED = "shared_screen"
 }

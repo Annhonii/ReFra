@@ -188,6 +188,12 @@ interface FileSystemBackend {
      */
     fun knownContentSha1(conn: NetFsConnection, path: String): String? = null
 
+    /**
+     * Extra folder level inserted under the upload folder for [config], or null for none. Shared
+     * albums use it so two phones uploading the same file name never overwrite each other.
+     */
+    fun uploadSubfolder(config: CloudServerConfig): String? = null
+
     /** A ready-made JPEG preview stored at upload time, or null to fall back to generating one. */
     fun readStoredPreview(conn: NetFsConnection, path: String, size: ThumbnailSize): ByteArray? = null
 

@@ -20,6 +20,8 @@ data class BackupPillConfig(
     val hasActiveAccount: Boolean = false,
     /** Uploads are restricted to Wi-Fi (Wi-Fi only, or cellular upload of photos switched off). */
     val wifiRestricted: Boolean = false,
+    /** A shared family album account exists, so the Shared tab is worth showing. */
+    val hasSharedAccount: Boolean = false,
 )
 
 class BackupPillViewModel @Inject constructor(
@@ -31,6 +33,7 @@ class BackupPillViewModel @Inject constructor(
             BackupPillConfig(
                 hasActiveAccount = active.isNotEmpty(),
                 wifiRestricted = active.any { it.wifiOnly || !it.cellularPhotos },
+                hasSharedAccount = active.any { it.serverUrl.trim().startsWith("telegram-shared://", ignoreCase = true) },
             )
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BackupPillConfig())

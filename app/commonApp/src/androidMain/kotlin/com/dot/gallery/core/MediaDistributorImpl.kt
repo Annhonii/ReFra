@@ -210,7 +210,8 @@ class MediaDistributorImpl @Inject constructor(
     private val scannedMediaDao: ScannedMediaDao,
     private val smartScanDao: SmartScanDao,
     private val mediaCaptureTimeDao: MediaCaptureTimeDao,
-    private val startupGate: StartupWorkGate
+    private val startupGate: StartupWorkGate,
+    private val cloudServerConfigDao: com.dot.gallery.data.dao.CloudServerConfigDao
 ) : MediaDistributor {
     
     private val sharingMethod = SharingStarted.WhileSubscribed(5_000L)
@@ -1076,6 +1077,7 @@ class MediaDistributorImpl @Inject constructor(
     ): Flow<MediaState<UriMedia>> = when {
         albumId == MediaTypeAlbum.CLOUD_TAB_ALBUM_ID -> cloudTabTimelineMediaFlow(albumId)
         albumId == MediaTypeAlbum.DEVICE_TAB_ALBUM_ID -> deviceTabTimelineMediaFlow(albumId)
+        albumId == MediaTypeAlbum.SHARED_TAB_ALBUM_ID -> sharedTabTimelineMediaFlow(albumId)
         MediaTypeAlbum.isMediaTypeAlbumId(albumId) -> mediaTypeAlbumTimelineMediaFlow(albumId)
         isUnsortedCloudAlbumId(albumId) -> unsortedCloudAlbumTimelineMediaFlow(albumId)
         // Negative ids span both cloud album hash ids and (possibly negative) MediaStore
@@ -1109,10 +1111,30 @@ class MediaDistributorImpl @Inject constructor(
      * device (the unified timeline hides those behind their local tile), newest first.
      */
     private fun cloudTabTimelineMediaFlow(albumId: Long): Flow<MediaState<UriMedia>> =
-        combine(_cloudCachedMedia, settingsFlow, dateFormatsFlow, timelineSortFlow) { cloud, settings, dateFormats, sort ->
+        cloudOnlyTimelineMediaFlow(albumId, flowOf(null)) { _, _ -> true }
+
+    /** The Shared tab: cloud media that belongs to a shared family album account. */
+    private fun sharedTabTimelineMediaFlow(albumId: Long): Flow<MediaState<UriMedia>> =
+        cloudOnlyTimelineMediaFlow(
+            albumId,
+            cloudServerConfigDao.getActive().map { configs ->
+                configs.filter { it.serverUrl.trim().startsWith("telegram-shared://", ignoreCase = true) }
+                    .map { it.id }.toSet()
+            }
+        ) { media, sharedIds ->
+            val cfg = com.dot.gallery.cloud.core.CloudUri.parse(media.uri.toString())?.configId
+            cfg != null && sharedIds?.contains(cfg) == true
+        }
+
+    private fun cloudOnlyTimelineMediaFlow(
+        albumId: Long,
+        sharedIdsFlow: Flow<Set<Long>?>,
+        include: (UriMedia, Set<Long>?) -> Boolean
+    ): Flow<MediaState<UriMedia>> =
+        combine(_cloudCachedMedia, settingsFlow, dateFormatsFlow, timelineSortFlow, sharedIdsFlow) { cloud, settings, dateFormats, sort, sharedIds ->
             val (defaultDateFormat, extendedDateFormat, weeklyDateFormat) = dateFormats
             mapMediaToItem(
-                data = sort.toMediaOrder().sortMedia(cloud.filter { it.isCloud }),
+                data = sort.toMediaOrder().sortMedia(cloud.filter { it.isCloud && include(it, sharedIds) }),
                 error = "",
                 albumId = albumId,
                 groupByMonth = settings?.groupTimelineByMonth == true,

@@ -76,12 +76,15 @@ class TelegramBackend(private val context: Context) : FileSystemBackend {
                 )
             }
             val master = TelegramCrypto.deriveMasterKey(passphrase, chatId)
+            val shared = isShared(config.serverUrl)
             val vault = TelegramVault(
                 client = client,
                 chatId = chatId,
                 master = master,
                 indexFile = indexFileFor(token, chatId),
-                log = { CloudTrace.d("Telegram: $it") }
+                manifestDelayMs = if (shared) SHARED_MANIFEST_DELAY_MS else TelegramVault.DEFAULT_MANIFEST_DELAY_MS,
+                log = { CloudTrace.d("Telegram: $it") },
+                shared = shared
             )
             try {
                 vault.open()
@@ -95,6 +98,20 @@ class TelegramBackend(private val context: Context) : FileSystemBackend {
     }
 
     private fun vault(conn: NetFsConnection) = (conn as TgConnection).vault
+
+    /** Shared albums put each phone's uploads in its own folder, so equal file names never collide. */
+    override fun uploadSubfolder(config: CloudServerConfig): String? =
+        if (isShared(config.serverUrl)) deviceTag() else null
+
+    private fun deviceTag(): String {
+        val prefs = context.getSharedPreferences("telegram_shared", Context.MODE_PRIVATE)
+        prefs.getString("device_tag", null)?.let { return it }
+        val model = android.os.Build.MODEL.orEmpty().filter { it.isLetterOrDigit() || it == ' ' || it == '-' }
+            .trim().ifEmpty { "Phone" }.take(24)
+        val tag = model + "-" + TelegramCrypto.toHex(TelegramCrypto.randomBytes(1))
+        prefs.edit().putString("device_tag", tag).apply()
+        return tag
+    }
 
     private fun clean(path: String) = path.trim('/')
 
@@ -193,6 +210,12 @@ class TelegramBackend(private val context: Context) : FileSystemBackend {
 
     companion object {
         const val MIN_PASSPHRASE = 12
+        const val SHARED_URL_SCHEME = "telegram-shared://"
+        private const val SHARED_MANIFEST_DELAY_MS = 15_000L
+
+        /** A shared (family) album is a Telegram account whose channel is written as `telegram-shared://<id>`. */
+        fun isShared(serverUrl: String?): Boolean =
+            serverUrl.orEmpty().trim().startsWith(SHARED_URL_SCHEME, ignoreCase = true)
         private val vaults = ConcurrentHashMap<String, TelegramVault>()
 
         /** Tolerates what people paste: surrounding spaces/quotes/newlines and a leading `bot`. */
@@ -200,7 +223,8 @@ class TelegramBackend(private val context: Context) : FileSystemBackend {
             raw.orEmpty().filterNot { it.isWhitespace() || it == '"' || it == '\'' }.removePrefix("bot")
 
         internal fun parseChatId(serverUrl: String): String {
-            val id = serverUrl.trim().removePrefix("telegram://").removePrefix("TELEGRAM://").trim('/')
+            val id = serverUrl.trim().removePrefix("telegram-shared://").removePrefix("telegram://")
+                .removePrefix("TELEGRAM://").trim('/')
             if (id.isEmpty()) throw IOException("Channel ID is required (e.g. telegram://-1001234567890)")
             return id
         }
