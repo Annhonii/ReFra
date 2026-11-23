@@ -157,10 +157,13 @@ fun MainScreenTopBar(
         label = "headerHide",
     )
     Box(
-        modifier = Modifier.graphicsLayer {
-            translationY = -size.height * hideProgress
-            alpha = 1f - hideProgress
-        },
+        modifier = Modifier
+            .graphicsLayer {
+                translationY = -size.height * hideProgress
+                alpha = 1f - hideProgress
+            }
+            // Solid like Google Photos: grid content scrolls beneath it instead of showing through.
+            .background(MaterialTheme.colorScheme.surfaceContainer),
     ) {
         MainScreenTopBarContent(
             backup = backup.takeIf { hasBackup },

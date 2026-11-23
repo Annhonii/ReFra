@@ -147,13 +147,7 @@ fun <T : Media> GridPinchZoomScope.MediaGrid(
     onRetry: (() -> Unit)? = null,
     onMediaClick: @DisallowComposableCalls (media: T) -> Unit
 ) {
-    LaunchedEffect(gridState.isScrollInProgress) {
-        snapshotFlow {
-            gridState.isScrollInProgress
-        }.collectLatest {
-            isScrolling.value = it
-        }
-    }
+    TrackHeaderHiddenOnScroll(gridState, isScrolling)
 
     val topContent: LazyGridScope.() -> Unit = remember(aboveGridContent) {
         {

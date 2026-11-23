@@ -82,6 +82,7 @@ import com.dot.gallery.core.image.thumbnail.rememberThumbnailMotionState
 import com.dot.gallery.core.presentation.components.EmptyAlbum
 import com.dot.gallery.core.presentation.components.Error
 import com.dot.gallery.core.presentation.components.FilterButton
+import com.dot.gallery.core.presentation.components.TrackHeaderHiddenOnScroll
 import com.dot.gallery.core.presentation.components.FilterKind
 import com.dot.gallery.core.presentation.components.FilterOption
 import com.dot.gallery.core.presentation.components.FloatingTopBarScrim
@@ -445,9 +446,7 @@ fun AlbumsContent(
                         state = pinchState,
                         indicatorTopPadding = innerPaddingValues.calculateTopPadding() + 16.dp,
                     ) {
-                        LaunchedEffect(gridState) {
-                            snapshotFlow { gridState.isScrollInProgress }.collect { isScrolling.value = it }
-                        }
+                        TrackHeaderHiddenOnScroll(gridState, isScrolling)
                         val bottomBarInset = rememberBottomBarInset(innerPaddingValues)
                         LazyVerticalGrid(
                             state = gridState,
@@ -810,9 +809,7 @@ fun AlbumsContent(
 
             AlbumViewType.LIST -> {
                 with(sharedTransitionScope) {
-                    LaunchedEffect(listState) {
-                        snapshotFlow { listState.isScrollInProgress }.collect { isScrolling.value = it }
-                    }
+                    TrackHeaderHiddenOnScroll(listState, isScrolling)
                     val bottomBarInset = rememberBottomBarInset(innerPaddingValues)
                     LazyColumn(
                         state = listState,

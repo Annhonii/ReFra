@@ -251,11 +251,7 @@ fun <T : Media> MosaicMediaGrid(
     onRetry: (() -> Unit)? = null,
     onMediaClick: @DisallowComposableCalls (media: T) -> Unit
 ) {
-    LaunchedEffect(gridState.isScrollInProgress) {
-        snapshotFlow { gridState.isScrollInProgress }.collectLatest {
-            isScrolling.value = it
-        }
-    }
+    TrackHeaderHiddenOnScroll(gridState, isScrolling)
 
     val safeColumns = safeMosaicColumns(columns)
     val displayItems = remember(mappedData, allowHeaders, safeColumns) {
