@@ -33,7 +33,6 @@ import com.dot.gallery.generated.resources.cloud_shared_album_join
 import com.dot.gallery.generated.resources.cloud_shared_album_name
 import com.dot.gallery.generated.resources.cloud_shared_album_paste_hint
 import com.dot.gallery.generated.resources.cloud_shared_album_share
-import com.dot.gallery.generated.resources.cloud_shared_album_share_chooser
 import com.dot.gallery.generated.resources.cloud_shared_album_share_warning
 import com.dot.gallery.generated.resources.cloud_shared_album_switch
 import com.dot.gallery.generated.resources.cloud_shared_album_switch_desc
