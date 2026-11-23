@@ -56,6 +56,8 @@ fun TimelineScreen(
     mediaState: State<MediaState<UriMedia>>,
     metadataState: State<MediaMetadataState>,
     storyCardsViewModel: StoryCardsViewModel? = null,
+    viewerAlbumId: Long = -1L,
+    scrollToTopRoute: String = Screen.TimelineScreen.route,
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
 ) {
@@ -129,11 +131,11 @@ fun TimelineScreen(
         lastCellIndex = lastCellIndex,
         lastMosaicCellIndex = lastMosaicCellIndex,
         indexProgress = captureTimeIndexProgress,
-        scrollToTopRoute = Screen.TimelineScreen.route,
+        scrollToTopRoute = scrollToTopRoute,
         sharedTransitionScope = sharedTransitionScope,
         animatedContentScope = animatedContentScope,
         onMediaClick = {
-            eventHandler.navigate(Screen.MediaViewScreen.idAndAlbum(it.id, -1L))
+            eventHandler.navigate(Screen.MediaViewScreen.idAndAlbum(it.id, viewerAlbumId))
         },
         onOpenPlace = { place ->
             eventHandler.navigate(
@@ -144,7 +146,7 @@ fun TimelineScreen(
             )
         },
         onPlayMonth = { month ->
-            eventHandler.navigate(Screen.MediaViewScreen.idAndAlbumSlideshow(month.firstMediaId, -1L))
+            eventHandler.navigate(Screen.MediaViewScreen.idAndAlbumSlideshow(month.firstMediaId, viewerAlbumId))
         },
         selectionOverlay = { allMedia, selectedMediaList ->
             SelectionSheet(

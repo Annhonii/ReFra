@@ -1075,6 +1075,7 @@ class MediaDistributorImpl @Inject constructor(
         loadMode: AlbumMediaLoadMode
     ): Flow<MediaState<UriMedia>> = when {
         albumId == MediaTypeAlbum.CLOUD_TAB_ALBUM_ID -> cloudTabTimelineMediaFlow(albumId)
+        albumId == MediaTypeAlbum.DEVICE_TAB_ALBUM_ID -> deviceTabTimelineMediaFlow(albumId)
         MediaTypeAlbum.isMediaTypeAlbumId(albumId) -> mediaTypeAlbumTimelineMediaFlow(albumId)
         isUnsortedCloudAlbumId(albumId) -> unsortedCloudAlbumTimelineMediaFlow(albumId)
         // Negative ids span both cloud album hash ids and (possibly negative) MediaStore
@@ -1103,9 +1104,31 @@ class MediaDistributorImpl @Inject constructor(
         return filteredTimelineMediaFlow(albumId) { type?.matches(it) == true }
     }
 
-    /** The Cloud tab: only the items that live in the cloud (uploaded photos and videos), newest first. */
+    /**
+     * The Cloud tab: every cloud-uploaded item, including those whose local copy is still on the
+     * device (the unified timeline hides those behind their local tile), newest first.
+     */
     private fun cloudTabTimelineMediaFlow(albumId: Long): Flow<MediaState<UriMedia>> =
-        filteredTimelineMediaFlow(albumId) { it.isCloud }
+        combine(_cloudCachedMedia, settingsFlow, dateFormatsFlow, timelineSortFlow) { cloud, settings, dateFormats, sort ->
+            val (defaultDateFormat, extendedDateFormat, weeklyDateFormat) = dateFormats
+            mapMediaToItem(
+                data = sort.toMediaOrder().sortMedia(cloud.filter { it.isCloud }),
+                error = "",
+                albumId = albumId,
+                groupByMonth = settings?.groupTimelineByMonth == true,
+                groupByYear = settings?.groupTimelineByYear == true,
+                groupSimilarMedia = false,
+                enabledGroupTypes = emptySet(),
+                defaultDateFormat = defaultDateFormat,
+                extendedDateFormat = extendedDateFormat,
+                weeklyDateFormat = weeklyDateFormat,
+                dateSource = sort.dateSource
+            )
+        }
+
+    /** The Device tab: only what is on the phone — cloud-only items are left to the Cloud tab. */
+    private fun deviceTabTimelineMediaFlow(albumId: Long): Flow<MediaState<UriMedia>> =
+        filteredTimelineMediaFlow(albumId) { !it.isCloud }
 
     private fun filteredTimelineMediaFlow(
         albumId: Long,

@@ -340,14 +340,19 @@ fun NavigationComp(
             composable(
                 route = Screen.TimelineScreen()
             ) {
+                val deviceDistributor = LocalMediaDistributor.current
+                val deviceMediaState = remember(deviceDistributor) {
+                    deviceDistributor.restorableAlbumTimelineMediaFlow(MediaTypeAlbum.DEVICE_TAB_ALBUM_ID)
+                }.collectAsStateWithLifecycle(initialValue = MediaState())
                 TimelineScreen(
                     paddingValues = paddingValues,
                     isScrolling = isScrolling,
                     sharedTransitionScope = sharedTransitionScope,
                     animatedContentScope = this,
-                    mediaState = timelineState(),
+                    mediaState = deviceMediaState,
                     metadataState = metadataState(),
                     storyCardsViewModel = storyCardsViewModel,
+                    viewerAlbumId = MediaTypeAlbum.DEVICE_TAB_ALBUM_ID,
                 )
             }
             composable(
@@ -365,6 +370,8 @@ fun NavigationComp(
                     mediaState = cloudMediaState,
                     metadataState = metadataState(),
                     storyCardsViewModel = null,
+                    viewerAlbumId = MediaTypeAlbum.CLOUD_TAB_ALBUM_ID,
+                    scrollToTopRoute = Screen.CloudScreen.route,
                 )
             }
             composable(
