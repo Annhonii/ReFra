@@ -13,7 +13,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CloudDone
+import androidx.compose.material.icons.outlined.WifiOff
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.ui.unit.sp
+import dev.brewkits.kmpworkmanager.background.domain.TaskState
+import com.dot.gallery.cloud.ui.backup.BackupPillViewModel
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -73,6 +80,9 @@ import com.dot.gallery.core.work.workScheduler
 import com.dot.gallery.domain.settings.SettingsKeys
 import com.dot.gallery.generated.resources.Res
 import com.dot.gallery.generated.resources.cloud_backup_uploading_short
+import com.dot.gallery.generated.resources.cloud_backup_pill_backing_up
+import com.dot.gallery.generated.resources.cloud_backup_pill_complete
+import com.dot.gallery.generated.resources.cloud_backup_pill_waiting_wifi
 import com.dot.gallery.generated.resources.cloud_backup_verifying_count
 import com.dot.gallery.generated.resources.cloud_backup_verifying_existing
 import com.dot.gallery.generated.resources.cloud_upload_uploading_count
@@ -102,11 +112,28 @@ fun MainScreenTopBar(
 ) {
     val eventHandler = LocalEventHandler.current
     val autoHide by rememberPreference(SettingsKeys.autoHideSearchBar)
-    val activeBackup by remember {
+    val runState by remember {
         workScheduler().taggedTasksFlow(CloudUploadWorker.TAG_BACKUP)
-            .map { tasks -> tasks.any(::isActiveBackupWork) }
+            .map { tasks ->
+                when {
+                    tasks.any { it.state is TaskState.Running } -> BackupRunState.Running
+                    tasks.any(::isActiveBackupWork) -> BackupRunState.Queued
+                    else -> BackupRunState.Idle
+                }
+            }
             .distinctUntilChanged()
-    }.collectAsStateWithLifecycle(initialValue = false)
+    }.collectAsStateWithLifecycle(initialValue = BackupRunState.Idle)
+    val activeBackup = runState != BackupRunState.Idle
+    val pillConfig by injectViewModel<BackupPillViewModel> { backupPillViewModel }
+        .config.collectAsStateWithLifecycle()
+    val onUnmetered by rememberOnUnmeteredNetwork()
+    val pillState = when {
+        !pillConfig.hasActiveAccount -> null
+        runState == BackupRunState.Running -> BackupPillState.BackingUp
+        runState == BackupRunState.Queued ->
+            if (pillConfig.wifiRestricted && !onUnmetered) BackupPillState.WaitingForWifi else BackupPillState.BackingUp
+        else -> BackupPillState.Complete
+    }
     // Queue scanning/hashing is only needed while a real backup is active, never on idle startup.
     val backup = if (activeBackup) {
         injectViewModel<UploadDetailsViewModel> { uploadDetailsViewModel }
@@ -114,7 +141,7 @@ fun MainScreenTopBar(
     } else null
     // Screens with a pullable grid share their state so a pull past the top opens the status.
     val revealState = LocalGalleryHeaderReveal.current ?: rememberGalleryHeaderRevealState()
-    val hasBackup = backup != null
+    val hasBackup = backup != null && runState == BackupRunState.Running
     LaunchedEffect(revealState, hasBackup) {
         revealState.enabled = hasBackup
         if (!hasBackup) revealState.reset()
@@ -136,7 +163,8 @@ fun MainScreenTopBar(
         },
     ) {
         MainScreenTopBarContent(
-            backup = backup,
+            backup = backup.takeIf { hasBackup },
+            pillState = pillState,
             revealState = revealState,
             onBrandClick = { eventHandler.navigate(Screen.SettingsScreen()) },
             onOpenBackupDetails = { eventHandler.navigate(Screen.UploadDetailsScreen()) },
@@ -150,6 +178,7 @@ fun MainScreenTopBar(
 @Composable
 internal fun MainScreenTopBarContent(
     backup: UploadDetailsUiState?,
+    pillState: BackupPillState? = if (backup != null) BackupPillState.BackingUp else null,
     revealState: GalleryHeaderRevealState,
     onBrandClick: () -> Unit,
     onOpenBackupDetails: () -> Unit,
@@ -165,12 +194,13 @@ internal fun MainScreenTopBarContent(
         menu = menu,
         filter = filter,
         revealState = revealState,
-        status = if (backup != null) {
+        showBrand = false,
+        status = if (pillState != null) {
             {
                 TimelineBackupChip(
-                    verifying = backup.phase == CloudUploadWorker.PHASE_VERIFYING,
+                    state = pillState,
                     expanded = revealState.expanded,
-                    onClick = revealState::toggle,
+                    onClick = if (backup != null) revealState::toggle else onOpenBackupDetails,
                 )
             }
         } else null,
@@ -186,9 +216,35 @@ internal fun MainScreenTopBarContent(
     )
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+internal enum class BackupRunState { Idle, Queued, Running }
+
+/** What the Google-Photos-style status pill at the top-left of the home screen says. */
+internal enum class BackupPillState { BackingUp, WaitingForWifi, Complete }
+
+/** True while the device is on an unmetered (Wi-Fi) network. */
 @Composable
-private fun TimelineBackupChip(verifying: Boolean, expanded: Boolean, onClick: () -> Unit) {
+private fun rememberOnUnmeteredNetwork(): androidx.compose.runtime.State<Boolean> {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    return androidx.compose.runtime.produceState(initialValue = true, context) {
+        val cm = context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        fun current(): Boolean = cm.getNetworkCapabilities(cm.activeNetwork)
+            ?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED) == true
+        value = current()
+        val callback = object : android.net.ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: android.net.Network) { value = current() }
+            override fun onLost(network: android.net.Network) { value = current() }
+            override fun onCapabilitiesChanged(
+                network: android.net.Network,
+                capabilities: android.net.NetworkCapabilities,
+            ) { value = current() }
+        }
+        runCatching { cm.registerDefaultNetworkCallback(callback) }
+        awaitDispose { runCatching { cm.unregisterNetworkCallback(callback) } }
+    }
+}
+
+@Composable
+private fun TimelineBackupChip(state: BackupPillState, expanded: Boolean, onClick: () -> Unit) {
     val expansionDescription = stringResource(
         if (expanded) Res.string.gallery_home_backup_expanded else Res.string.gallery_home_backup_collapsed,
     )
@@ -199,25 +255,45 @@ private fun TimelineBackupChip(verifying: Boolean, expanded: Boolean, onClick: (
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = Modifier
-            .heightIn(min = GalleryChrome.ToolbarButtonSize)
+            .height(GalleryChrome.ToolbarButtonSize)
             .semantics { stateDescription = expansionDescription }
             .testTag(TimelineBackupChipTag),
     ) {
         Row(
-            modifier = Modifier.padding(start = 12.dp, end = 16.dp, top = Spacing.Small, bottom = Spacing.Small),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.Small),
+            modifier = Modifier.padding(start = 12.dp, end = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            LoadingIndicator(
-                modifier = Modifier.size(24.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            when (state) {
+                BackupPillState.BackingUp -> CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.5.dp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                )
+                BackupPillState.WaitingForWifi -> Icon(
+                    imageVector = Icons.Outlined.WifiOff,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+                BackupPillState.Complete -> Icon(
+                    imageVector = Icons.Outlined.CloudDone,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
             Text(
                 text = stringResource(
-                    if (verifying) Res.string.cloud_backup_verifying_existing
-                    else Res.string.cloud_backup_uploading_short,
+                    when (state) {
+                        BackupPillState.BackingUp -> Res.string.cloud_backup_pill_backing_up
+                        BackupPillState.WaitingForWifi -> Res.string.cloud_backup_pill_waiting_wifi
+                        BackupPillState.Complete -> Res.string.cloud_backup_pill_complete
+                    },
                 ),
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.titleSmall.copy(fontSize = 16.sp),
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

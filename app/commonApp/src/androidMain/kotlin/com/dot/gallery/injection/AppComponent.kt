@@ -96,6 +96,7 @@ import com.dot.gallery.cloud.ui.CloudSelectionViewModel
 import com.dot.gallery.cloud.ui.CloudUploadSettingsViewModel
 import com.dot.gallery.cloud.ui.archive.CloudArchiveViewModel
 import com.dot.gallery.cloud.ui.backup.CloudBackupViewModel
+import com.dot.gallery.cloud.ui.backup.BackupPillViewModel
 import com.dot.gallery.cloud.ui.backup.UploadDetailsViewModel
 import com.dot.gallery.cloud.ui.destinations.CloudDestinationsViewModel
 import com.dot.gallery.cloud.ui.memories.MemoriesViewModel
@@ -706,6 +707,7 @@ abstract class AppComponent(
     abstract val storyCardsViewModel: StoryCardsViewModel
     abstract val syncStatusViewModel: SyncStatusViewModel
     abstract val uploadDetailsViewModel: UploadDetailsViewModel
+    abstract val backupPillViewModel: BackupPillViewModel
     abstract val vaultViewModel: VaultViewModel
     abstract val albumTimelineViewModel: (savedStateHandle: SavedStateHandle) -> AlbumTimelineViewModel
     abstract val cloudDestinationsViewModel: (savedStateHandle: SavedStateHandle) -> CloudDestinationsViewModel

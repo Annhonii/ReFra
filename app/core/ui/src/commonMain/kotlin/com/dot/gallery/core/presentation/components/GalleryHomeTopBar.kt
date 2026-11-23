@@ -83,6 +83,7 @@ fun GalleryHomeTopBar(
     filter: (@Composable () -> Unit)? = null,
     status: (@Composable () -> Unit)? = null,
     expandedStatus: (@Composable () -> Unit)? = null,
+    showBrand: Boolean = true,
     revealState: GalleryHeaderRevealState? = null,
     statusBarInsets: WindowInsets = WindowInsets.statusBars,
 ) {
@@ -136,6 +137,8 @@ fun GalleryHomeTopBar(
             ) { currentStatus ->
                 if (currentStatus != null) {
                     currentStatus()
+                } else if (!showBrand) {
+                    Spacer(Modifier.size(0.dp))
                 } else {
                     IconButton(
                         onClick = onBrandClick,
