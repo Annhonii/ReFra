@@ -105,7 +105,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.dot.gallery.ui.theme.BlackScrim
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -3053,30 +3056,6 @@ fun <T : Media> MediaViewScreen(
                                 enter = contentEnter,
                                 exit = contentExit
                             ) {
-                                val bottomBarFollowTheme = if (autoContrast) {
-                                    !isBottomDark
-                                } else {
-                                    !allowBlur
-                                }
-                                val surfaceContainer by animateColorAsState(
-                                    targetValue = when {
-                                        autoContrast && !isBottomDark -> Color.White.copy(0.5f)
-                                        autoContrast -> Color.Black.copy(0.5f)
-                                        bottomBarFollowTheme -> MaterialTheme.colorScheme.surfaceContainer.copy(
-                                            if (isDarkTheme) 0.5f else 0.8f
-                                        )
-
-                                        else -> Color.Black.copy(0.5f)
-                                    },
-                                    animationSpec = if (sharedElementsEnabled) spring() else snap(),
-                                    label = "BottomBarSurfaceContainer"
-                                )
-                                val backgroundModifier = if (!allowBlur) {
-                                    Modifier.background(
-                                        color = surfaceContainer,
-                                        shape = RoundedCornerShape(100)
-                                    )
-                                } else Modifier
                                 Box(
                                     modifier = Modifier
                                         .graphicsLayer {
@@ -3087,6 +3066,24 @@ fun <T : Media> MediaViewScreen(
                                                 bottomBarHeightDefault.toPx() * progress
                                             compositingStrategy = CompositingStrategy.ModulateAlpha
                                         }
+                                        // Gradient scrim behind the transparent buttons (Google Photos
+                                        // style): keeps white icons readable on bright photos.
+                                        .drawBehind {
+                                            val fade = 40.dp.toPx()
+                                            drawRect(
+                                                brush = Brush.verticalGradient(
+                                                    colorStops = arrayOf(
+                                                        0f to Color.Transparent,
+                                                        0.5f to BlackScrim.copy(alpha = BlackScrim.alpha * 0.55f),
+                                                        1f to BlackScrim,
+                                                    ),
+                                                    startY = -fade,
+                                                    endY = size.height,
+                                                ),
+                                                topLeft = androidx.compose.ui.geometry.Offset(0f, -fade),
+                                                size = androidx.compose.ui.geometry.Size(size.width, size.height + fade),
+                                            )
+                                        }
                                         .padding(
                                             bottom = bottomPadding + extraPaddingWithNavButtons + 16.dp
                                         )
@@ -3096,15 +3093,9 @@ fun <T : Media> MediaViewScreen(
                                         .fillMaxWidth(),
                                     contentAlignment = Alignment.Center
                                 ) {
+                                    // No pill behind the buttons: the group draws nothing of its own.
                                     GallerySegmentedActionGroup(
-                                        surfaceModifier = Modifier
-                                            .then(backgroundModifier)
-                                            .hazeEffectScaled(
-                                                state = LocalHazeState.current,
-                                                style = HazeMaterials.ultraThin(
-                                                    containerColor = surfaceContainer
-                                                )
-                                            ),
+                                        surfaceModifier = Modifier,
                                     ) {
                                         if (quickActionsContent != null) {
                                             quickActionsContent(

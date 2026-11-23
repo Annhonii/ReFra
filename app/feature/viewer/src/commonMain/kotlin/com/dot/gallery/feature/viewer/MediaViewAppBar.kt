@@ -13,6 +13,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -122,12 +123,9 @@ fun MediaViewAppBar(
     val isVideo by rememberedDerivedState(currentMedia) {
         currentMedia?.isVideo ?: false
     }
-    val followTheme = remember(visualPolicy, isVideo, isDarkTheme, autoContrast, isImageDark) {
-        if (autoContrast) !isImageDark
-        // Chrome follows the theme only while the viewer background does — a forced-dark
-        // background on a light theme must keep the scrim/icon tint dark.
-        else !visualPolicy.usesDarkBackground(isDarkTheme) && !isVideo
-    }
+    // Transparent chrome (Google Photos style): icons are always white and stay readable over any
+    // photo thanks to the gradient scrim, so nothing follows the theme or the image brightness.
+    val followTheme = false
     // "Animate media items" off — the bar and its pills appear instantly and colour shifts snap.
     val animationsEnabled = visualPolicy.animationsEnabled
     val innerEnter = if (animationsEnabled) enterAnimation else EnterTransition.None
@@ -138,14 +136,7 @@ fun MediaViewAppBar(
         enter = if (animationsEnabled) enterAnimation(DEFAULT_TOP_BAR_ANIMATION_DURATION) else EnterTransition.None,
         exit = if (animationsEnabled) exitAnimation(DEFAULT_TOP_BAR_ANIMATION_DURATION) else ExitTransition.None
     ) {
-        val gradientColor by animateColorAsState(
-            when {
-                autoContrast -> if (isImageDark) BlackScrim else WhiterBlackScrim
-                followTheme -> if (isDarkTheme) BlackScrim else WhiterBlackScrim
-                else -> BlackScrim
-            },
-            animationSpec = colorSpec,
-        )
+        val gradientColor = BlackScrim
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -153,52 +144,33 @@ fun MediaViewAppBar(
         ) {
             Box(
                 modifier = Modifier
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(gradientColor, Color.Transparent)
+                    .drawBehind {
+                        // Reaches below the bar so white icons keep contrast on bright photos.
+                        val fade = 28.dp.toPx()
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0f to gradientColor,
+                                    0.65f to gradientColor.copy(alpha = gradientColor.alpha * 0.55f),
+                                    1f to Color.Transparent,
+                                ),
+                                startY = 0f,
+                                endY = size.height + fade,
+                            ),
+                            size = androidx.compose.ui.geometry.Size(size.width, size.height + fade),
                         )
-                    )
+                    }
                     .padding(top = paddingValues.calculateTopPadding())
                     .padding(start = 4.dp, end = if (showInfo) 4.dp else 16.dp)
                     .padding(vertical = 8.dp)
                     .then(modifier)
                     .fillMaxWidth(),
             ) {
-                val surfaceContainer by animateColorAsState(
-                    targetValue = when {
-                        autoContrast && !isImageDark -> Color.White.copy(0.4f)
-                        autoContrast -> Color.Black.copy(0.3f)
-                        followTheme -> MaterialTheme.colorScheme.surfaceContainer.copy(0.5f)
-                        else -> Color.Black.copy(0.3f)
-                    },
-                    animationSpec = colorSpec,
-                    label = "AppBarSurfaceContainer"
-                )
-                val backgroundModifier = if (!visualPolicy.allowBlur) {
-                    Modifier.background(
-                        color = surfaceContainer,
-                        shape = CircleShape
-                    )
-                } else Modifier
-                val contentColor by animateColorAsState(
-                    targetValue = when {
-                        autoContrast -> if (isImageDark) Color.White else Color.Black
-                        followTheme -> MaterialTheme.colorScheme.onSurface
-                        else -> Color.White
-                    },
-                    animationSpec = colorSpec,
-                    label = "AppBarContentColor"
-                )
+                val contentColor = Color.White
 
                 CompositionLocalProvider(LocalContentColor provides contentColor) {
+                // No pill behind the buttons: the group draws nothing of its own.
                 val groupSurface = Modifier
-                    .then(backgroundModifier)
-                    .hazeEffectScaled(
-                        state = LocalHazeState.current,
-                        style = HazeMaterials.ultraThin(
-                            containerColor = surfaceContainer
-                        )
-                    )
                 GallerySegmentedActionGroup(
                     modifier = modifier
                         .align(Alignment.CenterStart)

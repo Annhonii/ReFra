@@ -87,20 +87,9 @@ fun <T : Media> MediaViewQuickBottomBar(
         currentMedia?.isVideo ?: false
     }
     val isDarkTheme = isDarkTheme()
-    val followTheme = remember(visualPolicy, isVideo, isDarkTheme, autoContrast, isImageDark) {
-        if (autoContrast) !isImageDark
-        else !visualPolicy.usesDarkBackground(isDarkTheme) && !isVideo
-    }
-    val contentColor by animateColorAsState(
-        targetValue = when {
-            autoContrast -> if (isImageDark) Color.White else Color.Black
-            followTheme -> MaterialTheme.colorScheme.onSurface
-            else -> Color.White
-        },
-        // "Animate media items" off — chrome colour shifts snap.
-        animationSpec = if (visualPolicy.animationsEnabled) spring() else snap(),
-        label = "BottomBarContentColor"
-    )
+    // Transparent chrome (Google Photos style): always white icons over the gradient scrim.
+    val followTheme = false
+    val contentColor = Color.White
     val eventHandler = LocalEventHandler.current
     LaunchedEffect(followTheme) {
         eventHandler.setFollowTheme(followTheme)
