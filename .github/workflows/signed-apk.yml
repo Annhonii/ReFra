@@ -1,14 +1,18 @@
 name: Signed APK
 
-# Signed release APK (arm64, with cloud providers incl. Telegram) on every push to main, or on demand.
+# Signed release APK (arm64, with cloud providers incl. Telegram). Manual only: run it from the Actions tab.
+# After the build it publishes a GitHub Release with the APK attached (turn off with the "release" input).
 # Needs these repository secrets: SIGNING_KEY (base64 of the .jks), ALIAS, KEY_PASSWORD, KEY_STORE_PASSWORD.
 on:
   workflow_dispatch:
-  push:
-    branches: [ "main" ]
+    inputs:
+      release:
+        description: "Publish a GitHub Release with the APK after the build"
+        type: boolean
+        default: true
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: signed-${{ github.ref }}
@@ -59,3 +63,14 @@ jobs:
         with:
           name: refra-signed-arm64
           path: app/androidApp/build/outputs/apk-renamed/**/*.apk
+      - name: Publish GitHub Release
+        if: ${{ inputs.release }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APK=$(find app/androidApp/build/outputs/apk-renamed -name '*.apk' | head -n 1)
+          TAG="build-${{ github.run_number }}"
+          gh release create "$TAG" "$APK" \
+            --target "${{ github.sha }}" \
+            --title "ReFra build ${{ github.run_number }}" \
+            --notes "Signed arm64 build from commit ${{ github.sha }}"
