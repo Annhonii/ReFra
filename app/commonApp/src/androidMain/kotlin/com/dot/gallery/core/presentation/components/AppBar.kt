@@ -253,7 +253,8 @@ fun AppBarContainer(
     val wideWindow = windowSizeClass.widthSizeClass > WindowWidthSizeClass.Compact
     val useNavRail = wideWindow && !galleryDetailRequested
     val useOldNavbar by rememberOldNavbar()
-    val hideNavBarSetting by rememberAutoHideNavBar()
+    // Hiding the navigation bar on scroll was removed: the bar always stays visible.
+    val hideNavBarSetting = false
     val anySelectedRoute = remember(backStackEntry, bottomNavItems) {
         bottomNavItems.any { it.route == backStackEntry?.destination?.route }
     }

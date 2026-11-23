@@ -215,7 +215,7 @@ object SettingsKeys {
     /** Width in dp of the settings list kept beside an open settings page. */
     val settingsPaneWidth = PrefKey.float("settings_pane_width", default = 360f)
     val autoOpenSearchKeyboard = PrefKey.bool("auto_open_search_keyboard", default = true)
-    val autoHideNavBar = PrefKey.bool("auto_hide_navigationbar", default = true)
+    val autoHideNavBar = PrefKey.bool("auto_hide_navigationbar", default = false)
 
     // Date format overrides — blank = follow system (see )
     val rawDateHeaderFormat = PrefKey.string("date_header_format", default = "")

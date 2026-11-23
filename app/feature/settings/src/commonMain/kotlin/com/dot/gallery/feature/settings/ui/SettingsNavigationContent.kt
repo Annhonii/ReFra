@@ -412,7 +412,7 @@ private fun NavigationListScreen(
 
     val settingsList: SnapshotStateList<SettingsEntity> = remember(
         launchHeader, forcedLastScreenPref, barsHeader, showOldNavbarPref,
-        autoHideSearchPref, autoOpenKeyboardPref, autoHideNavBarPref, dualPanePref,
+        autoHideSearchPref, autoOpenKeyboardPref, dualPanePref,
         interfaceHeader, showSelectionTitlesPref, selectionActionsPref
     ) {
         mutableStateListOf(
@@ -422,7 +422,6 @@ private fun NavigationListScreen(
             showOldNavbarPref,
             autoHideSearchPref,
             autoOpenKeyboardPref,
-            autoHideNavBarPref,
             dualPanePref,
             interfaceHeader,
             showSelectionTitlesPref,
