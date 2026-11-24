@@ -57,6 +57,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -136,6 +137,7 @@ class CloudUploadWorker @Inject constructor(
     override suspend fun doWork(input: WorkInput, env: WorkerEnvironment): WorkerResult {
         printDebug("CloudUploadWorker: Starting upload check...")
         val isManual = input.getBoolean(KEY_MANUAL, false)
+        activeRuns.update { it + 1 }
         try {
             // Manual ("Upload now" / "Start backup") runs are user-initiated and must work even
             // when periodic auto-sync (syncEnabled) is off. syncEnabled only governs the background
@@ -456,6 +458,8 @@ class CloudUploadWorker @Inject constructor(
                 reason = "upload pass failed: ${e.message}",
                 attemptCap = MAX_BACKUP_RUN_ATTEMPTS
             )
+        } finally {
+            activeRuns.update { it - 1 }
         }
     }
 
@@ -879,6 +883,11 @@ class CloudUploadWorker @Inject constructor(
          * so UI progress observers and the media distributor can track/react to any upload
          * regardless of its unique work name.
          */
+        /**
+         * Number of upload passes running right now. The Cloud list waits for this to reach 0 so a big
+         * backup does not rebuild the whole timeline after every single photo.
+         */
+        val activeRuns = kotlinx.coroutines.flow.MutableStateFlow(0)
         const val TAG_BACKUP = "cloud_upload_backup"
         const val TAG_PERIODIC_BACKUP = "cloud_upload_periodic"
         const val TAG_MANUAL_BACKUP = "cloud_upload_manual"

@@ -608,6 +608,10 @@ class MediaDistributorImpl @Inject constructor(
             emitAll(
                 cloudRepository.getCachedMedia()
                     .debounce(1_000L)
+                    // Hold the latest snapshot while an upload pass runs; show it once the backup is done.
+                    .combine(CloudUploadWorker.activeRuns) { entities, runs -> entities to runs }
+                    .filter { it.second == 0 }
+                    .map { it.first }
                     .map { entities -> mapper.map(entities) }
                     .flowOn(Dispatchers.Default)
             )
