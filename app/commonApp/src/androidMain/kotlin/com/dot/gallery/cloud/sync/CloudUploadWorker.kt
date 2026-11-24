@@ -78,6 +78,8 @@ import com.dot.gallery.R
 import me.tatarka.inject.annotations.Inject
 import com.dot.gallery.generated.resources.Res
 import com.dot.gallery.generated.resources.cloud_backup_channel_progress
+import com.dot.gallery.generated.resources.cloud_backup_limit_reached_text
+import com.dot.gallery.generated.resources.cloud_backup_limit_reached_title
 import com.dot.gallery.generated.resources.cloud_backup_channel_status
 import com.dot.gallery.generated.resources.cloud_backup_progress_eta
 import com.dot.gallery.generated.resources.cloud_backup_progress_estimating
@@ -129,10 +131,18 @@ class CloudUploadWorker @Inject constructor(
 
     private data class UploadOutcome(
         val result: kotlin.Result<CloudMediaEntity>? = null,
-        val alreadyPresent: Boolean = false
+        val alreadyPresent: Boolean = false,
+        /** Skipped because today's data cap is used up; not a failure, it resumes tomorrow. */
+        val limitReached: Boolean = false
     )
 
     private val applicationContext: Context = context
+    private val dataBudget: UploadDataBudget by lazy { UploadDataBudget.from(applicationContext) }
+
+    private fun isNetworkMetered(): Boolean = runCatching {
+        (applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE)
+            as? ConnectivityManager)?.isActiveNetworkMetered ?: false
+    }.getOrDefault(false)
 
     override suspend fun doWork(input: WorkInput, env: WorkerEnvironment): WorkerResult {
         printDebug("CloudUploadWorker: Starting upload check...")
@@ -352,6 +362,7 @@ class CloudUploadWorker @Inject constructor(
             // notification (isHeavyTask at schedule time); detail updates ride WorkSignals.
 
             val progressMutex = Mutex()
+            val limitHit = java.util.concurrent.atomic.AtomicBoolean(false)
             val progressThrottle = BackupProgressThrottle(SystemClock::elapsedRealtime)
             val uploadStartedAt = SystemClock.elapsedRealtime()
             coroutineScope {
@@ -365,6 +376,10 @@ class CloudUploadWorker @Inject constructor(
                             ) { task ->
                                 if (env.isCancelled()) return@runWorkerPool
                                 val outcome = executeUpload(task, hashCache)
+                                if (outcome.limitReached) {
+                                    limitHit.set(true)
+                                    return@runWorkerPool
+                                }
                                 progressMutex.withLock {
                                     if (outcome.alreadyPresent) {
                                         completedItems++
@@ -435,6 +450,7 @@ class CloudUploadWorker @Inject constructor(
             if (notifyFailures && failedItems > 0) {
                 postFailureNotification(failedItems, failedFiles)
             }
+            if (limitHit.get()) postLimitReachedNotification()
 
             // "Sync albums to server": reconcile enabled local albums with their server albums.
             runAlbumSyncPass(activeConfigs, uploadedAssets)
@@ -739,6 +755,24 @@ class CloudUploadWorker @Inject constructor(
         }
     }
 
+    private fun postLimitReachedNotification() {
+        if (!canNotify()) return
+        val channelId = ensureChannel(
+            CHANNEL_PROGRESS, Res.string.cloud_backup_channel_progress, NotificationManager.IMPORTANCE_LOW
+        )
+        val text = applicationContext.getString(Res.string.cloud_backup_limit_reached_text)
+        val builder = NotificationCompat.Builder(applicationContext, channelId)
+            .setSmallIcon(R.drawable.ic_cloud_upload)
+            .setContentTitle(applicationContext.getString(Res.string.cloud_backup_limit_reached_title))
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setAutoCancel(true)
+            .setSilent(true)
+        runCatching {
+            NotificationManagerCompat.from(applicationContext).notify(NOTIFICATION_ID_LIMIT, builder.build())
+        }
+    }
+
     private fun cancelUploadProgressNotification() {
         runCatching {
             NotificationManagerCompat.from(applicationContext).cancel(NOTIFICATION_ID_PROGRESS)
@@ -778,6 +812,7 @@ class CloudUploadWorker @Inject constructor(
         hashCache: ConcurrentHashMap<String, String>
     ): UploadOutcome {
         return try {
+            if (dataBudget.isExhausted(isNetworkMetered())) return UploadOutcome(limitReached = true)
             var checksum = task.checksum
             if (task.provider.remoteExists(task.media, task.targetPath)) {
                 checksum = checksum ?: cachedSha1(task.media, hashCache)
@@ -817,9 +852,11 @@ class CloudUploadWorker @Inject constructor(
                     return UploadOutcome(alreadyPresent = true)
                 }
             }
+            val metered = isNetworkMetered()
             val result = checksum?.let {
                 task.provider.uploadAsset(task.media, task.targetPath, it)
             } ?: task.provider.uploadAsset(task.media, task.targetPath)
+            result.onSuccess { entity -> dataBudget.record(entity.size, metered) }
             UploadOutcome(result = result)
         } catch (e: CancellationException) {
             throw e
@@ -903,6 +940,7 @@ class CloudUploadWorker @Inject constructor(
         private const val CHANNEL_PROGRESS = "cloud_backup_progress"
         private const val CHANNEL_STATUS = "cloud_backup_status"
         private const val NOTIFICATION_ID_PROGRESS = 91001
+        private const val NOTIFICATION_ID_LIMIT = 91004
         private const val NOTIFICATION_ID_STATUS = 91002
         private val accountUploadMutexes = ConcurrentHashMap<Long, Mutex>()
 

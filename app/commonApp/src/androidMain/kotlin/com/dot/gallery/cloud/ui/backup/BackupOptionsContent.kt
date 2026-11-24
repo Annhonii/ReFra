@@ -13,10 +13,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.dot.gallery.cloud.sync.UploadDataBudget
 import org.jetbrains.compose.resources.stringResource
 import com.dot.gallery.cloud.core.ProviderType
 import com.dot.gallery.cloud.core.UploadTargetResolver
@@ -30,7 +33,9 @@ import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.DataUsage
 import androidx.compose.material.icons.outlined.SignalCellularAlt
+import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material.icons.outlined.Videocam
 import com.dot.gallery.core.presentation.util.add
 import com.dot.gallery.data.entity.CloudServerConfigEntity
@@ -43,6 +48,12 @@ import com.dot.gallery.generated.resources.cloud_backup_cellular_photos
 import com.dot.gallery.generated.resources.cloud_backup_cellular_photos_summary
 import com.dot.gallery.generated.resources.cloud_backup_cellular_videos
 import com.dot.gallery.generated.resources.cloud_backup_cellular_videos_summary
+import com.dot.gallery.generated.resources.cloud_backup_daily_limit_cellular
+import com.dot.gallery.generated.resources.cloud_backup_daily_limit_header
+import com.dot.gallery.generated.resources.cloud_backup_daily_limit_summary
+import com.dot.gallery.generated.resources.cloud_backup_daily_limit_unlimited
+import com.dot.gallery.generated.resources.cloud_backup_daily_limit_value
+import com.dot.gallery.generated.resources.cloud_backup_daily_limit_wifi
 import com.dot.gallery.generated.resources.cloud_backup_destination
 import com.dot.gallery.generated.resources.cloud_backup_folder_dialog_hint
 import com.dot.gallery.generated.resources.cloud_backup_network
@@ -82,6 +93,21 @@ fun BackupOptionsContent(
     val uploadBasePath = config.uploadBasePath
     val uploadVideosPath = config.uploadVideosPath
     var editingPath by remember { mutableStateOf<PathField?>(null) }
+    val context = LocalContext.current
+    val budget = remember { UploadDataBudget.from(context) }
+    var wifiLimitMb by remember { mutableLongStateOf(budget.limitMb(false)) }
+    var cellularLimitMb by remember { mutableLongStateOf(budget.limitMb(true)) }
+    // true = editing the mobile-data limit, false = Wi-Fi, null = dialog closed
+    var editingLimitMetered by remember { mutableStateOf<Boolean?>(null) }
+    val limitHeader = stringResource(Res.string.cloud_backup_daily_limit_header)
+    val limitSummary = stringResource(Res.string.cloud_backup_daily_limit_summary)
+    val limitWifiTitle = stringResource(Res.string.cloud_backup_daily_limit_wifi)
+    val limitCellularTitle = stringResource(Res.string.cloud_backup_daily_limit_cellular)
+    val limitUnlimited = stringResource(Res.string.cloud_backup_daily_limit_unlimited)
+    val wifiLimitText = if (wifiLimitMb <= 0L) limitUnlimited
+    else stringResource(Res.string.cloud_backup_daily_limit_value, wifiLimitMb.toInt())
+    val cellularLimitText = if (cellularLimitMb <= 0L) limitUnlimited
+    else stringResource(Res.string.cloud_backup_daily_limit_value, cellularLimitMb.toInt())
 
     val networkHeader = stringResource(Res.string.cloud_backup_network)
     val cellularPhotosTitle = stringResource(Res.string.cloud_backup_cellular_photos)
@@ -123,6 +149,8 @@ fun BackupOptionsContent(
     )
 
     val settingsList = remember(
+        wifiLimitText,
+        cellularLimitText,
         cellularPhotos,
         cellularVideos,
         requireCharging,
@@ -152,6 +180,29 @@ fun BackupOptionsContent(
                     summary = cellularVideosSummary,
                     isChecked = cellularVideos,
                     onCheck = { onUpdateConfig { copy(cellularVideos = it) } },
+                    screenPosition = Position.Bottom
+                )
+            )
+
+            // Daily data limit (global: applies to every account)
+            add(SettingsEntity.Header(title = limitHeader))
+            add(
+                SettingsEntity.Preference(
+                    icon = Icons.Outlined.Wifi,
+                    title = limitWifiTitle,
+                    summary = limitSummary,
+                    rightText = wifiLimitText,
+                    onClick = { editingLimitMetered = false },
+                    screenPosition = Position.Top
+                )
+            )
+            add(
+                SettingsEntity.Preference(
+                    icon = Icons.Outlined.DataUsage,
+                    title = limitCellularTitle,
+                    summary = limitSummary,
+                    rightText = cellularLimitText,
+                    onClick = { editingLimitMetered = true },
                     screenPosition = Position.Bottom
                 )
             )
@@ -214,6 +265,19 @@ fun BackupOptionsContent(
         else config.displayName.ifBlank { config.providerType.displayName },
     ) {
         items(settingsList, key = { it.title }) { SettingsItem(item = it) }
+    }
+
+    editingLimitMetered?.let { metered ->
+        DailyLimitDialog(
+            title = if (metered) limitCellularTitle else limitWifiTitle,
+            currentMb = if (metered) cellularLimitMb else wifiLimitMb,
+            onDismiss = { editingLimitMetered = null },
+            onConfirm = { mb ->
+                budget.setLimitMb(metered, mb)
+                if (metered) cellularLimitMb = mb else wifiLimitMb = mb
+                editingLimitMetered = null
+            }
+        )
     }
 
     editingPath?.let { field ->

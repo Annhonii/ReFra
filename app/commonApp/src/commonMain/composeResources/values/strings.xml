@@ -945,6 +945,16 @@
     <string name="cloud_backup_pill_waiting_wifi">Waiting for Wi-Fi</string>
     <string name="cloud_backup_channel_progress">Backup progress</string>
     <string name="cloud_backup_progress_title">Uploading to cloud</string>
+    <string name="cloud_backup_daily_limit_header">Daily data limit</string>
+    <string name="cloud_backup_daily_limit_wifi">Wi-Fi upload limit</string>
+    <string name="cloud_backup_daily_limit_cellular">Mobile data upload limit</string>
+    <string name="cloud_backup_daily_limit_summary">Most data backup may upload per day, across all accounts</string>
+    <string name="cloud_backup_daily_limit_unlimited">Unlimited</string>
+    <string name="cloud_backup_daily_limit_value">%1$d MB per day</string>
+    <string name="cloud_backup_daily_limit_custom">Custom</string>
+    <string name="cloud_backup_daily_limit_custom_hint">Megabytes per day</string>
+    <string name="cloud_backup_limit_reached_title">Daily upload limit reached</string>
+    <string name="cloud_backup_limit_reached_text">Backup paused to save data. It continues tomorrow, or raise the limit in Backup options.</string>
     <string name="cloud_backup_progress_eta">%1$d uploaded · %2$d left · about %3$s remaining</string>
     <string name="cloud_backup_progress_estimating">%1$d uploaded · %2$d left · estimating time…</string>
     <string name="cloud_backup_failed_title">Backup incomplete</string>
