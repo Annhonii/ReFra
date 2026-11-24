@@ -194,6 +194,12 @@ interface FileSystemBackend {
      */
     fun uploadSubfolder(config: CloudServerConfig): String? = null
 
+    /**
+     * How many uploads may run at the same time. Backends whose uploads are independent of each other
+     * (Telegram) raise this so a slow connection stays busy; the default keeps one upload at a time.
+     */
+    val maxParallelUploads: Int get() = 1
+
     /** A ready-made JPEG preview stored at upload time, or null to fall back to generating one. */
     fun readStoredPreview(conn: NetFsConnection, path: String, size: ThumbnailSize): ByteArray? = null
 

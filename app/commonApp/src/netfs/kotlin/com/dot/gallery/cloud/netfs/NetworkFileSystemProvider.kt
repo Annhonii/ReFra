@@ -716,9 +716,15 @@ open class NetworkFileSystemProvider(
         return if (sub == null) "$base/${localMedia.label}" else "$base/$sub/${localMedia.label}"
     }
 
+    override val maxConcurrentUploads: Int get() = backend.maxParallelUploads.coerceAtLeast(1)
+
+    /** Runs [block] under the mutation lock, unless the backend uploads in parallel by design. */
+    private suspend fun <T> uploadLocked(block: suspend () -> T): T =
+        if (backend.maxParallelUploads > 1) block() else mutationMutex.withLock { block() }
+
     override suspend fun uploadAsset(localMedia: Media, targetPath: String?): Result<CloudMediaEntity> =
         withContext(Dispatchers.IO) {
-            mutationMutex.withLock {
+            uploadLocked {
                 writeAsset(localMedia, deterministicRemoteId(localMedia, targetPath), null, false)
             }
         }
@@ -728,7 +734,7 @@ open class NetworkFileSystemProvider(
         targetPath: String?,
         checksum: String
     ): Result<CloudMediaEntity> = withContext(Dispatchers.IO) {
-        mutationMutex.withLock {
+        uploadLocked {
             writeAsset(localMedia, deterministicRemoteId(localMedia, targetPath), checksum, false)
         }
     }

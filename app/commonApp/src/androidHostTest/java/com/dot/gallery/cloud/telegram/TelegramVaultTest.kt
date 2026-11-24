@@ -236,6 +236,20 @@ class TelegramVaultTest {
     private fun TelegramVault.readAll(path: String, offset: Long = 0L): ByteArray =
         openRead(path, offset).use { it.readBytes() }
 
+    // ---- parallel uploads ---------------------------------------------------------------------
+
+    @Test
+    fun threeParallelUploadsAllLandAndReadBack() {
+        val v = vault()
+        val pool = Executors.newFixedThreadPool(3)
+        val files = (0 until 12).associate { "p/img$it.jpg" to bytes(chunk * 2 + it * 7) }
+        val futures = files.map { (path, data) -> pool.submit<Any> { v.put(path, data, bytes(10), bytes(20)) } }
+        futures.forEach { it.get(30, TimeUnit.SECONDS) }
+        pool.shutdown()
+        assertEquals(files.size, v.entries().size)
+        files.forEach { (path, data) -> assertArrayEquals(data, v.readAll(path)) }
+    }
+
     // ---- crypto -----------------------------------------------------------------------------
 
     @Test

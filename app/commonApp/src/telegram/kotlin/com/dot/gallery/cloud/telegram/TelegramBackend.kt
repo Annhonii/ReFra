@@ -100,6 +100,10 @@ class TelegramBackend(private val context: Context) : FileSystemBackend {
     private fun vault(conn: NetFsConnection) = (conn as TgConnection).vault
 
     /** Shared albums put each phone's uploads in its own folder, so equal file names never collide. */
+    // Uploads are independent (own file key, own messages) and the client paces sends globally, so a
+    // few can run at once. This is what keeps a slow mobile uplink busy.
+    override val maxParallelUploads: Int get() = 3
+
     override fun uploadSubfolder(config: CloudServerConfig): String? =
         if (isShared(config.serverUrl)) deviceTag() else null
 
