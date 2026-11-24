@@ -81,18 +81,17 @@ fun ViewerDismissFlightLayer(bridge: ViewerDismissBridge) {
                 val w = flight.bounds.width.roundToInt().coerceAtLeast(1)
                 val h = flight.bounds.height.roundToInt().coerceAtLeast(1)
                 val placeable = measurable.measure(Constraints.fixed(w, h))
-                layout(placeable.width, placeable.height) {
-                    placeable.place(
-                        (flight.bounds.left - origin.value.x).roundToInt(),
-                        (flight.bounds.top - origin.value.y).roundToInt(),
-                    )
-                }
+                // Position is applied below as a float layer translation: rounding left/top to
+                // whole pixels every frame made the edges crawl and read as jitter.
+                layout(placeable.width, placeable.height) { placeable.place(0, 0) }
             }
                 // The source card may be rounded while the viewer is flat. Driving the clip from
                 // [ViewerDismissFlight.cornerRadius] (already interpolated by the same progress
                 // that morphs the bounds) makes the corners merge with the card instead of the
                 // flight landing square over it.
                 .graphicsLayer {
+                    translationX = flight.bounds.left - origin.value.x
+                    translationY = flight.bounds.top - origin.value.y
                     val radius = flight.cornerRadius
                     shape = RoundedCornerShape(radius)
                     clip = radius.value > 0f

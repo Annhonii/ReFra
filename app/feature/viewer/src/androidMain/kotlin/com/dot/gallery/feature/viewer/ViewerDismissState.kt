@@ -2,6 +2,7 @@ package com.dot.gallery.feature.viewer
 
 import androidx.activity.BackEventCompat
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -36,7 +37,10 @@ import com.dot.gallery.core.ViewerDismissBridge
 private const val DISMISS_THRESHOLD_FRACTION = 0.12f
 private const val DISMISS_FADE_DISTANCE_FRACTION = 0.35f
 private const val BACKDROP_FADE_SPEED = 2.5f
-private const val FLIGHT_DURATION_MS = 260
+// A touch longer than a snappy 260ms with a strongly decelerating curve reads as one smooth
+// glide (fast start, soft landing on the cell/fullscreen) instead of a quick, choppy jump.
+private const val FLIGHT_DURATION_MS = 340
+private val FlightEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
 private const val BACK_FLIGHT_FINISH_MS = 140
 
 fun viewerDismissProgress(offsetY: Float, height: Int): Float {
@@ -212,7 +216,7 @@ class ViewerDismissState(
         try {
             progress.animateTo(
                 targetValue = 1f,
-                animationSpec = tween(FLIGHT_DURATION_MS, easing = FastOutSlowInEasing),
+                animationSpec = tween(FLIGHT_DURATION_MS, easing = FlightEasing),
             ) {
                 b.flight?.let { f ->
                     // The flight slot may have been taken over (e.g. a predictive-back
@@ -309,7 +313,7 @@ class ViewerDismissState(
             try {
                 progress.animateTo(
                     targetValue = 1f,
-                    animationSpec = tween(FLIGHT_DURATION_MS, easing = FastOutSlowInEasing),
+                    animationSpec = tween(FLIGHT_DURATION_MS, easing = FlightEasing),
                 ) {
                     b.flight?.let { f ->
                         f.bounds = Rect(
