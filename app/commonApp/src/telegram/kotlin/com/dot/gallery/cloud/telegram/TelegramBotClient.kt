@@ -52,11 +52,33 @@ internal class TelegramBotClient(
     private val baseUrl: String = "https://api.telegram.org",
     private val connectTimeoutMs: Int = 20_000,
     private val readTimeoutMs: Int = 120_000,
-    private val maxRateLimitRetries: Int = 8,
+    private val maxRateLimitRetries: Int = 40,
     private val maxTransientRetries: Int = 3,
     /** Test seam: replaced so tests do not actually wait. */
-    private val sleeper: (Long) -> Unit = { Thread.sleep(it) }
+    private val sleeper: (Long) -> Unit = { Thread.sleep(it) },
+    /**
+     * Telegram allows roughly 20 messages per minute per channel. Spacing uploads this far apart keeps a
+     * big backup under that limit, instead of racing into 429 "retry after" stalls and failed photos.
+     */
+    private val sendSpacingMs: Long = DEFAULT_SEND_SPACING_MS,
+    private val clock: () -> Long = { System.nanoTime() / 1_000_000L }
 ) {
+
+    private val spacingLock = Any()
+    private var nextSendAt = 0L
+
+    /** Blocks until the next upload slot is free (uploads are the only calls Telegram rate-limits hard). */
+    private fun awaitSendSlot() {
+        if (sendSpacingMs <= 0L) return
+        val wait: Long
+        synchronized(spacingLock) {
+            val now = clock()
+            val start = maxOf(now, nextSendAt)
+            nextSendAt = start + sendSpacingMs
+            wait = start - now
+        }
+        if (wait > 0L) pause(wait)
+    }
 
     init {
         require(token.isNotBlank()) { "Bot token is required" }
@@ -89,6 +111,7 @@ internal class TelegramBotClient(
      * Telegram clients and `disable_content_type_detection` stops Telegram from sniffing the payload.
      */
     fun sendDocument(chatId: String, fileName: String, bytes: ByteArray): TgSentDocument {
+        awaitSendSlot()
         val result = call(
             "sendDocument",
             fields = mapOf(
@@ -308,4 +331,8 @@ internal class TelegramBotClient(
     private fun JsonElement?.asLong(): Long? = (this as? JsonPrimitive)?.longOrNull
     private fun JsonElement?.asInt(): Int? = (this as? JsonPrimitive)?.intOrNull
     private fun JsonElement?.asBoolean(): Boolean? = (this as? JsonPrimitive)?.booleanOrNull
+
+    companion object {
+        const val DEFAULT_SEND_SPACING_MS = 3_200L
+    }
 }

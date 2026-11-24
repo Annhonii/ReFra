@@ -571,7 +571,7 @@ class TelegramVaultTest {
     @Test
     fun rateLimitsAreRetriedUsingRetryAfter() {
         val waits = CopyOnWriteArrayList<Long>()
-        val c = TelegramBotClient(tg.token, tg.baseUrl, sleeper = { waits += it })
+        val c = TelegramBotClient(tg.token, tg.baseUrl, sleeper = { waits += it }, sendSpacingMs = 0L)
         tg.rateLimitNextCall = true
         assertEquals(777L, c.getMe().id)
         assertEquals(1, waits.size)

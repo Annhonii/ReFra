@@ -68,6 +68,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -79,6 +80,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
@@ -599,9 +602,15 @@ class MediaDistributorImpl @Inject constructor(
             emit(withContext(Dispatchers.IO) {
                 mapper.map(cloudRepository.getCachedMediaAsync())
             })
-            emitAll(cloudRepository.getCachedMedia().map { entities ->
-                mapper.map(entities)
-            })
+            // A big backup inserts one row per photo. Coalescing the burst (and mapping off the main
+            // thread) stops the whole Cloud/Shared timeline from being rebuilt after every single upload.
+            @OptIn(FlowPreview::class)
+            emitAll(
+                cloudRepository.getCachedMedia()
+                    .debounce(1_000L)
+                    .map { entities -> mapper.map(entities) }
+                    .flowOn(Dispatchers.Default)
+            )
         },
         captureTimeIndexFlow
     ) { media, index -> media.withCaptureTimeIndex(index) }
