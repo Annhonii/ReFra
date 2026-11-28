@@ -958,7 +958,11 @@ class CloudUploadWorker @Inject constructor(
                 constraints = Constraints(
                     requiresNetwork = true,
                     requiresUnmeteredNetwork = wifiOnly,
-                    isHeavyTask = true,
+                    // Not a heavy task: heavy tasks run in a foreground service, and Android 12+
+                    // refuses to start one while the app is in the background. That made the
+                    // periodic backup silently do nothing until the app was opened. A plain
+                    // background job runs on its own; progress still shows via our notification.
+                    isHeavyTask = false,
                     backoffPolicy = BackoffPolicy.EXPONENTIAL,
                     backoffDelayMs = TimeUnit.MINUTES.toMillis(5),
                     maxRetries = MAX_BACKUP_RUN_ATTEMPTS - 1,
